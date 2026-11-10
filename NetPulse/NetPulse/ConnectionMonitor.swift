@@ -83,6 +83,10 @@ final class ConnectionMonitor: ObservableObject {
     @Published private(set) var isLowDataMode = false
     @Published private(set) var isMonitoring = false
 
+    /// Wi-Fi band chosen by the user for each network, keyed by Wi-Fi name. iOS doesn't report the band.
+    @Published private var savedBands: [String: String] =
+        UserDefaults.standard.dictionary(forKey: "wifiBands") as? [String: String] ?? [:]
+
     private let pathMonitor = NWPathMonitor()
     private let telephony = CTTelephonyNetworkInfo()
     private let prober = Prober()
@@ -115,6 +119,17 @@ final class ConnectionMonitor: ObservableObject {
     var networkLabel: String {
         if network == .cellular, let radio { return radio }
         return network.label
+    }
+
+    private var bandKey: String { wifiName ?? "Unnamed Wi-Fi" }
+
+    /// The band saved for the current Wi-Fi network.
+    var wifiBand: WifiBand {
+        get { savedBands[bandKey].flatMap(WifiBand.init(rawValue:)) ?? .notSet }
+        set {
+            savedBands[bandKey] = newValue == .notSet ? nil : newValue.rawValue
+            UserDefaults.standard.set(savedBands, forKey: "wifiBands")
+        }
     }
 
     var quality: Quality {

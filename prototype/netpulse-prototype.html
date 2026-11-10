@@ -147,7 +147,8 @@ svg.chart { display: block; width: 100%; height: auto; }
       <p class="sec">Connection</p>
       <div class="card" style="gap:0">
         <div class="log" style="border-top:0;padding-top:0"><span class="sub">Type</span><b id="d-net">Wi-Fi</b></div>
-        <div class="log" id="d-wifi-row"><span class="sub">Wi-Fi Name</span><b id="d-wifi">Home-WiFi</b></div>
+        <div class="log" id="d-wifi-row"><span class="sub">Wi-Fi Name</span><b id="d-wifi">Kev</b></div>
+        <div class="log" id="d-band-row"><span class="sub">Band</span><b>2.4 GHz</b></div>
         <div class="log"><span class="sub">Provider</span><b id="d-isp">Safaricom Business</b></div>
       </div>
       <p class="sec">Last Minute</p>
@@ -260,7 +261,7 @@ svg.chart { display: block; width: 100%; height: auto; }
   })();
 
   function isp() { return net === 'Wi-Fi' ? 'Safaricom Business' : 'Safaricom'; }
-  function conn(r) { return r.net === 'Wi-Fi' ? 'Wi-Fi · Home-WiFi · Safaricom Business' : r.net + ' · Safaricom'; }
+  function conn(r) { return r.net === 'Wi-Fi' ? 'Wi-Fi · Kev · 2.4 GHz · Safaricom Business' : r.net + ' · Safaricom'; }
   function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
   function jitter(a) { if (a.length < 2) return null; var t = 0; for (var i = 1; i < a.length; i++) t += Math.abs(a[i] - a[i - 1]); return t / (a.length - 1); }
   function inLast(sec) { var c = Date.now() - sec * 1000, i = samples.length; while (i > 0 && samples[i - 1].t > c) i--; return samples.slice(i); }
@@ -351,7 +352,7 @@ svg.chart { display: block; width: 100%; height: auto; }
       drawGlyph(q);
       $('level').innerHTML = levelIcon(q) + q.level; $('level').className = 'level ' + q.cls;
       $('score').textContent = q.score == null ? '' : 'Strength ' + q.score + ' out of 100';
-      $('d-net').textContent = net; $('d-wifi-row').hidden = net !== 'Wi-Fi'; $('d-isp').textContent = isp();
+      $('d-net').textContent = net; $('d-wifi-row').hidden = $('d-band-row').hidden = net !== 'Wi-Fi'; $('d-isp').textContent = isp();
       $('s-lat').textContent = fms(q.med); $('s-jit').textContent = fms(q.jit);
       $('s-loss').textContent = q.loss == null ? '–' : Math.round(q.loss) + '%'; $('s-loss').className = q.loss > 0 ? 'bad' : '';
       drawChart($('chart-live'), inLast(120), 120, 150);
