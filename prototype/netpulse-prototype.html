@@ -143,6 +143,11 @@ svg.chart { display: block; width: 100%; height: auto; }
           <p class="sub" id="nettype" style="color:var(--fg);font-weight:500;margin-top:4px">Wi-Fi</p>
         </div>
       </div>
+      <div class="card" style="gap:0">
+        <div class="log" style="border-top:0;padding-top:0"><span class="sub">Connection</span><b id="d-net">Wi-Fi</b></div>
+        <div class="log" id="d-wifi-row"><span class="sub">Wi-Fi name</span><b id="d-wifi">Home-WiFi</b></div>
+        <div class="log"><span class="sub">Provider</span><b id="d-isp">Safaricom Business</b></div>
+      </div>
       <div class="card"><div class="row">
         <div class="stat"><small>Response time</small><b id="s-lat">–</b></div>
         <div class="stat"><small>Jitter</small><b id="s-jit">–</b></div>
@@ -170,6 +175,7 @@ svg.chart { display: block; width: 100%; height: auto; }
       </div>
       <div class="card" id="sp-latest" hidden>
         <h3>Latest result</h3>
+        <p class="sub" id="r-conn" style="font-size:12px"></p>
         <div class="row"><div class="stat"><small>Download</small><b id="r-down"></b></div><div class="stat"><small>Upload</small><b id="r-up"></b></div></div>
         <div class="row"><div class="stat"><small>Ping</small><b id="r-ping"></b></div><div class="stat"><small>Jitter</small><b id="r-jit"></b></div></div>
       </div>
@@ -177,7 +183,7 @@ svg.chart { display: block; width: 100%; height: auto; }
         <h3>History</h3>
         <div id="sp-hist"></div>
       </div>
-      <p class="note">On your iPhone a test takes about 20 seconds and uses real data. This preview runs a shortened, simulated test.</p>
+      <p class="note">The speeds on this screen are made-up examples. A browser preview can't measure your connection. On your iPhone the app runs a real test that takes about 20 seconds.</p>
     </div>
 
     <div class="screen" id="tab-cons" hidden>
@@ -243,12 +249,14 @@ svg.chart { display: block; width: 100%; height: auto; }
     }
     var day = 86400000;
     tests = [
-      { t: now - 0.2 * day, down: 236.4, up: 37.9, ping: 18, jit: 3, net: 'Wi-Fi' },
-      { t: now - 1.1 * day, down: 412.7, up: 51.2, ping: 33, jit: 6, net: '5G' },
-      { t: now - 2.3 * day, down: 88.3, up: 21.6, ping: 24, jit: 9, net: 'Wi-Fi' }
+      { t: now - 0.2 * day, down: 41.8, up: 14.2, ping: 9, jit: 3, net: 'Wi-Fi' },
+      { t: now - 1.1 * day, down: 96.7, up: 21.2, ping: 33, jit: 6, net: '5G' },
+      { t: now - 2.3 * day, down: 38.3, up: 12.6, ping: 11, jit: 4, net: 'Wi-Fi' }
     ];
   })();
 
+  function isp() { return net === 'Wi-Fi' ? 'Safaricom Business' : 'Safaricom'; }
+  function conn(r) { return r.net === 'Wi-Fi' ? 'Wi-Fi · Home-WiFi · Safaricom Business' : r.net + ' · Safaricom'; }
   function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
   function jitter(a) { if (a.length < 2) return null; var t = 0; for (var i = 1; i < a.length; i++) t += Math.abs(a[i] - a[i - 1]); return t / (a.length - 1); }
   function inLast(sec) { var c = Date.now() - sec * 1000, i = samples.length; while (i > 0 && samples[i - 1].t > c) i--; return samples.slice(i); }
@@ -322,6 +330,7 @@ svg.chart { display: block; width: 100%; height: auto; }
       $('level').textContent = q.level; $('level').className = 'level ' + q.cls;
       $('score').textContent = q.score == null ? '' : 'Strength ' + q.score + ' / 100';
       $('nettype').textContent = net;
+      $('d-net').textContent = net; $('d-wifi-row').hidden = net !== 'Wi-Fi'; $('d-isp').textContent = isp();
       $('s-lat').textContent = fms(q.med); $('s-jit').textContent = fms(q.jit);
       $('s-loss').textContent = q.loss == null ? '–' : Math.round(q.loss) + '%'; $('s-loss').className = q.loss > 0 ? 'bad' : '';
       drawChart($('chart-live'), inLast(120), 120, 150);
@@ -351,9 +360,10 @@ svg.chart { display: block; width: 100%; height: auto; }
     if (latest) {
       $('r-down').textContent = fmbps(latest.down) + ' Mbps'; $('r-up').textContent = fmbps(latest.up) + ' Mbps';
       $('r-ping').textContent = fms(latest.ping); $('r-jit').textContent = fms(latest.jit);
+      $('r-conn').textContent = conn(latest);
     }
     $('sp-hist').innerHTML = tests.slice(1).map(function (r) {
-      return '<div class="log"><div>' + new Date(r.t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '<small>' + r.net + '</small></div><div class="r">↓ ' + fmbps(r.down) + ' Mbps<br>↑ ' + fmbps(r.up) + ' Mbps</div></div>';
+      return '<div class="log"><div>' + new Date(r.t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '<small>' + conn(r) + '</small></div><div class="r">↓ ' + fmbps(r.down) + ' Mbps<br>↑ ' + fmbps(r.up) + ' Mbps</div></div>';
     }).join('');
   }
 
@@ -373,7 +383,7 @@ svg.chart { display: block; width: 100%; height: auto; }
     if (dropLeft > 0) { $('sp-err').hidden = false; $('sp-err').textContent = "Couldn't reach the speed test server. Check your connection and try again."; return; }
     $('sp-err').hidden = true;
     var f = slowLeft > 0 ? 0.07 : 1, wifi = net === 'Wi-Fi';
-    var goal = { down: (wifi ? 240 : 410) * f * (0.9 + Math.random() * 0.2), up: (wifi ? 38 : 52) * f * (0.9 + Math.random() * 0.2),
+    var goal = { down: (wifi ? 42 : 95) * f * (0.9 + Math.random() * 0.2), up: (wifi ? 14 : 21) * f * (0.9 + Math.random() * 0.2),
                  ping: (wifi ? 18 : 32) / Math.sqrt(f) + Math.random() * 4, jit: 2 + Math.random() * 5 / f };
     var t = 0, total = 70, btn = $('sp-run');
     btn.textContent = 'Cancel'; btn.classList.add('running'); $('sp-partial').innerHTML = '&nbsp;';
