@@ -227,7 +227,7 @@ final class ConnectionMonitor: ObservableObject {
         }
     }
 
-    private nonisolated static func kind(of path: NWPath) -> NetworkKind {
+    private nonisolated static func kind(of path: Network.NWPath) -> NetworkKind {
         guard path.status == .satisfied else { return .offline }
         if path.usesInterfaceType(.wifi) { return .wifi }
         if path.usesInterfaceType(.cellular) { return .cellular }
