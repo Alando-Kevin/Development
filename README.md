@@ -9,6 +9,14 @@ NetPulse tracks your iPhone's internet connection:
 - **Consistency** – a response-time timeline over 5 minutes to 24 hours with every drop marked in red, plus uptime and a drop log.
 - **Data** – mobile data and Wi-Fi used by day, a data bundle tracker (stacked bundles supported, soonest expiry used first) that compares what the phone measured with the balance your provider reports and flags differences, and a log of moves between Wi-Fi and mobile data.
 
+### Screenshots
+
+Taken from the real app running in an iPhone simulator on GitHub's build machine (so the connection shown is the build machine's, not a phone's). Re-create them from the Actions tab: *iOS build → Run workflow*.
+
+| Live | Speed | Consistency | Data |
+| --- | --- | --- | --- |
+| ![Live](docs/screenshots/live.png) | ![Speed](docs/screenshots/speed.png) | ![Consistency](docs/screenshots/consistency.png) | ![Data](docs/screenshots/data.png) |
+
 ### Run it on your iPhone
 
 1. On a Mac, install Xcode 16 or newer and open `NetPulse/NetPulse.xcodeproj`.
@@ -21,7 +29,7 @@ A free Apple ID works; apps installed that way need re-installing every 7 days. 
 
 - **Strength is a calculated score.** iOS does not let apps read the raw signal level (dBm), so NetPulse scores the connection from how quickly and reliably it responds to a small check every 2 seconds.
 - **Wi-Fi name needs two things.** iOS only shares it with apps that have the *Access Wi-Fi Information* capability and location permission. The project already requests both; allow location when the app asks. That capability may not be available to free Apple ID teams. If Xcode reports a signing error about it, remove *Access Wi-Fi Information* under Signing & Capabilities. The app still runs and shows "Not available" for the Wi-Fi name.
-- **Provider** is looked up from the connection's public address using Cloudflare (`speed.cloudflare.com/meta`), so it shows the company your traffic leaves through.
+- **Provider** is looked up from the connection's public address using ipinfo.io, so it shows the company your traffic leaves through.
 - **Data usage is the whole phone's total, not per app.** NetPulse reads the phone's own network counters, which cover all apps and keep counting while NetPulse is closed. iOS does not let apps see which app used the data (Settings › Mobile Service shows that). The counters reset when the phone restarts, so open NetPulse about once a day to avoid missing usage.
 - **Safaricom messages are pasted or passed in, not read directly.** iOS does not let any app read your text messages. Two ways to get a message into NetPulse:
   - **Paste:** on the Data tab tap *Add From Safaricom Message*, paste the message, and NetPulse adds the bundle or compares the balance.

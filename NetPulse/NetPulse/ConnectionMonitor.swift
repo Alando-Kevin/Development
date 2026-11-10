@@ -204,10 +204,9 @@ final class ConnectionMonitor: ObservableObject {
     }
 
     /// Looks up which provider this connection's public address belongs to.
-    /// Tries Cloudflare first, then ipinfo.io if that gives no answer.
+    /// Uses ipinfo.io. More sources can be added to the list; the first one that answers wins.
     private nonisolated static func lookupProvider() async -> String? {
         let sources: [(url: String, key: String)] = [
-            ("https://speed.cloudflare.com/meta", "asOrganization"),
             ("https://ipinfo.io/json", "org")
         ]
         for source in sources {

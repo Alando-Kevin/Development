@@ -358,6 +358,6 @@ final class DataUsageTracker: ObservableObject {
 
 extension Format {
     static func bytes(_ value: Int64) -> String {
-        value.formatted(.byteCount(style: .decimal, spellsOutZero: false))
+        value < 1_000 ? "0 MB" : value.formatted(.byteCount(style: .decimal))
     }
 }

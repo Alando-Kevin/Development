@@ -94,7 +94,8 @@ final class SpeedTestEngine: ObservableObject {
         results = Store.load([SpeedTestResult].self, from: Store.speedTestsFile) ?? []
     }
 
-    func run(network: NetworkKind, radio: String?, wifiName: String?, provider: String?) {
+    /// `connection` is read when the test finishes, so the result is labelled with the network it ran on.
+    func run(connection: @escaping () -> (network: NetworkKind, radio: String?, wifiName: String?, provider: String?)) {
         guard !phase.isRunning else { return }
         partialDownload = nil
         partialPing = nil
@@ -113,6 +114,7 @@ final class SpeedTestEngine: ObservableObject {
                 phase = .upload
                 let up = try await measureTransfer(.upload, progressStart: 0.55)
 
+                let (network, radio, wifiName, provider) = connection()
                 let result = SpeedTestResult(date: Date(), downloadMbps: down, uploadMbps: up,
                                              pingMs: ping, jitterMs: jitter, network: network, radio: radio,
                                              wifiName: wifiName, provider: provider)

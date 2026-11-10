@@ -28,8 +28,7 @@ struct SpeedTestView: View {
                             .accessibilityIdentifier("speed.cancel")
                         } else {
                             Button {
-                                speedTest.run(network: monitor.network, radio: monitor.radio,
-                                              wifiName: monitor.wifiName, provider: monitor.provider)
+                                runTest()
                             } label: {
                                 Text("Run Speed Test").frame(maxWidth: .infinity)
                             }
@@ -84,8 +83,7 @@ struct SpeedTestView: View {
             .onAppear {
                 // Launching with "-autoRunSpeedTest YES" starts a test straight away (used for automated checks).
                 if UserDefaults.standard.bool(forKey: "autoRunSpeedTest"), speedTest.results.isEmpty, !isRunning {
-                    speedTest.run(network: monitor.network, radio: monitor.radio,
-                                  wifiName: monitor.wifiName, provider: monitor.provider)
+                    runTest()
                 }
             }
             .animation(.snappy, value: speedTest.phase)
@@ -102,6 +100,12 @@ struct SpeedTestView: View {
             .confirmationDialog("Delete all speed test results?", isPresented: $confirmClear, titleVisibility: .visible) {
                 Button("Delete Results", role: .destructive) { speedTest.clearHistory() }
             }
+        }
+    }
+
+    private func runTest() {
+        speedTest.run { [monitor] in
+            (monitor.network, monitor.radio, monitor.wifiName, monitor.provider)
         }
     }
 
