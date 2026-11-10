@@ -36,6 +36,18 @@ struct LiveView: View {
                     }
 
                     Card {
+                        VStack(spacing: 10) {
+                            detailRow("Connection", monitor.networkLabel)
+                            if monitor.network == .wifi {
+                                Divider()
+                                detailRow("Wi-Fi name", monitor.wifiName ?? "Not available")
+                            }
+                            Divider()
+                            detailRow("Provider", monitor.provider ?? (monitor.network == .offline ? "–" : "Looking up…"))
+                        }
+                    }
+
+                    Card {
                         HStack(spacing: 12) {
                             StatTile(label: "Response time", value: Format.ms(quality.latencyMs))
                             StatTile(label: "Jitter", value: Format.ms(quality.jitterMs))
@@ -77,6 +89,19 @@ struct LiveView: View {
                 if enabled { monitor.start() } else { monitor.stop() }
             }
         }
+    }
+
+    private func detailRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .fontWeight(.medium)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .font(.subheadline)
     }
 
     @ViewBuilder

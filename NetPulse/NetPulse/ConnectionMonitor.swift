@@ -1,6 +1,8 @@
 import Foundation
 import Network
 import CoreTelephony
+import CoreLocation
+import NetworkExtension
 
 /// Sends one small request and reports how long the reply took.
 struct Prober {
@@ -42,6 +44,27 @@ struct Prober {
     }
 }
 
+/// Asks for location permission, which iOS requires before an app may read the Wi-Fi name.
+private final class LocationPermission: NSObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    var onChange: (() -> Void)?
+
+    override init() {
+        super.init()
+        manager.delegate = self
+    }
+
+    func request() {
+        if manager.authorizationStatus == .notDetermined {
+            manager.requestWhenInUseAuthorization()
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        onChange?()
+    }
+}
+
 /// Watches the connection: what kind it is, how quickly it responds, and when it drops.
 @MainActor
 final class ConnectionMonitor: ObservableObject {
@@ -53,6 +76,10 @@ final class ConnectionMonitor: ObservableObject {
     @Published private(set) var samples: [ProbeSample] = []
     @Published private(set) var network: NetworkKind = .offline
     @Published private(set) var radio: String?
+    /// Name of the Wi-Fi network. Nil when not on Wi-Fi or when iOS won't share it.
+    @Published private(set) var wifiName: String?
+    /// The internet service provider the connection goes out through.
+    @Published private(set) var provider: String?
     @Published private(set) var isLowDataMode = false
     @Published private(set) var isMonitoring = false
 
@@ -61,6 +88,9 @@ final class ConnectionMonitor: ObservableObject {
     private let prober = Prober()
     private var loop: Task<Void, Never>?
     private var unsavedCount = 0
+    private let locationPermission = LocationPermission()
+    private var detailsTask: Task<Void, Never>?
+    private var lastDetailsLookup = Date.distantPast
 
     init() {
         let cutoff = Date().addingTimeInterval(-Self.retention)
@@ -72,8 +102,11 @@ final class ConnectionMonitor: ObservableObject {
             Task { @MainActor in
                 self?.network = kind
                 self?.isLowDataMode = lowData
-                self?.refreshRadio()
+                self?.refreshDetails()
             }
+        }
+        locationPermission.onChange = { [weak self] in
+            Task { @MainActor in self?.refreshDetails() }
         }
         pathMonitor.start(queue: DispatchQueue(label: "netpulse.path"))
     }
@@ -101,6 +134,7 @@ final class ConnectionMonitor: ObservableObject {
     func start() {
         guard loop == nil else { return }
         isMonitoring = true
+        locationPermission.request()
         loop = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
@@ -134,6 +168,10 @@ final class ConnectionMonitor: ObservableObject {
     private func record(_ sample: ProbeSample) {
         samples.append(sample)
         unsavedCount += 1
+        // Retry the provider lookup if it failed earlier (for example, just after reconnecting).
+        if !sample.failed, provider == nil, Date().timeIntervalSince(lastDetailsLookup) > 30 {
+            refreshDetails()
+        }
         if unsavedCount >= 30 {
             let cutoff = Date().addingTimeInterval(-Self.retention)
             if let first = samples.first, first.time < cutoff {
@@ -141,6 +179,39 @@ final class ConnectionMonitor: ObservableObject {
             }
             save()
         }
+    }
+
+    /// Looks up the Wi-Fi name and service provider for the current connection.
+    private func refreshDetails() {
+        refreshRadio()
+        lastDetailsLookup = Date()
+        detailsTask?.cancel()
+        let kind = network
+        detailsTask = Task { [weak self] in
+            var name: String?
+            if kind == .wifi {
+                name = await NEHotspotNetwork.fetchCurrent()?.ssid
+            }
+            let organization = kind == .offline ? nil : await Self.lookupProvider()
+            if Task.isCancelled { return }
+            self?.wifiName = name
+            if organization != nil || kind == .offline {
+                self?.provider = organization
+            }
+        }
+    }
+
+    /// Asks Cloudflare which provider this connection's public address belongs to.
+    private nonisolated static func lookupProvider() async -> String? {
+        var request = URLRequest(url: URL(string: "https://speed.cloudflare.com/meta")!)
+        request.timeoutInterval = 6
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let organization = json["asOrganization"] as? String, !organization.isEmpty else {
+            return nil
+        }
+        return organization
     }
 
     private func refreshRadio() {

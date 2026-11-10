@@ -4,7 +4,7 @@
 
 NetPulse tracks your iPhone's internet connection:
 
-- **Live** – a 0–100 connection strength score with signal bars, the connection type (Wi-Fi, 5G, LTE), response time, jitter and failed checks.
+- **Live** – a 0–100 connection strength score with signal bars, the connection type (Wi-Fi, 5G, LTE), the Wi-Fi name, the service provider, response time, jitter and failed checks.
 - **Speed** – an on-demand speed test (download, upload, ping, jitter) with history.
 - **Consistency** – a response-time timeline over 5 minutes to 24 hours with every drop marked in red, plus uptime and a drop log.
 
@@ -19,6 +19,8 @@ A free Apple ID works; apps installed that way need re-installing every 7 days. 
 ### What to know
 
 - **Strength is a calculated score.** iOS does not let apps read the raw signal level (dBm), so NetPulse scores the connection from how quickly and reliably it responds to a small check every 2 seconds.
+- **Wi-Fi name needs two things.** iOS only shares it with apps that have the *Access Wi-Fi Information* capability and location permission. The project already requests both; allow location when the app asks. That capability may not be available to free Apple ID teams. If Xcode reports a signing error about it, remove *Access Wi-Fi Information* under Signing & Capabilities. The app still runs and shows "Not available" for the Wi-Fi name.
+- **Provider** is looked up from the connection's public address using Cloudflare (`speed.cloudflare.com/meta`), so it shows the company your traffic leaves through.
 - **Monitoring runs while the app is open.** iOS pauses apps in the background. Turn on "Keep screen awake" on the Live tab for long sessions. Times the app was closed show as blank stretches, not drops.
 - **Speed tests use real data** – several hundred MB on a very fast connection.
 - All history stays on the phone.

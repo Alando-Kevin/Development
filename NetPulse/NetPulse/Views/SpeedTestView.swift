@@ -17,7 +17,8 @@ struct SpeedTestView: View {
                                 if speedTest.phase.isRunning {
                                     speedTest.cancel()
                                 } else {
-                                    speedTest.run(network: monitor.network, radio: monitor.radio)
+                                    speedTest.run(network: monitor.network, radio: monitor.radio,
+                                              wifiName: monitor.wifiName, provider: monitor.provider)
                                 }
                             } label: {
                                 Text(speedTest.phase.isRunning ? "Cancel" : "Run speed test")
@@ -42,6 +43,9 @@ struct SpeedTestView: View {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Latest result")
                                     .font(.headline)
+                                Text(latest.connectionSummary)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                                 HStack(spacing: 12) {
                                     StatTile(label: "Download", value: "\(Format.mbps(latest.downloadMbps)) Mbps")
                                     StatTile(label: "Upload", value: "\(Format.mbps(latest.uploadMbps)) Mbps")
@@ -66,7 +70,7 @@ struct SpeedTestView: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(result.date.formatted(date: .abbreviated, time: .shortened))
                                                 .font(.subheadline)
-                                            Text(result.networkLabel)
+                                            Text(result.connectionSummary)
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                         }

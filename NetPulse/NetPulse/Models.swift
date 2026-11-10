@@ -56,10 +56,17 @@ struct SpeedTestResult: Codable, Identifiable {
     let jitterMs: Double
     let network: NetworkKind
     let radio: String?
+    var wifiName: String? = nil
+    var provider: String? = nil
 
     var networkLabel: String {
         if network == .cellular, let radio { return radio }
         return network.label
+    }
+
+    /// e.g. "Wi-Fi · Home · Safaricom Business"
+    var connectionSummary: String {
+        [networkLabel, wifiName, provider].compactMap { $0 }.joined(separator: " · ")
     }
 }
 
