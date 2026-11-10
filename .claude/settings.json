@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "indie-apple-stack": {
+      "source": {
+        "source": "github",
+        "repo": "Alando-Kevin/claude-code-apple-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "apple-skills@indie-apple-stack": true
+  }
+}

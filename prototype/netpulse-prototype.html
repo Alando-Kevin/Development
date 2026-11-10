@@ -62,7 +62,9 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .screen > * { flex-shrink: 0; }
 .screen h2 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 6px 0 0; }
 .card { background: var(--card); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-.card h3 { font-size: 16px; font-weight: 600; margin: 0; }
+.sec { font-size: 13px; font-weight: 600; color: var(--muted); margin: 6px 0 -8px; padding: 0 16px; }
+.glyph { width: 64px; flex: none; } .glyph svg { display: block; width: 100%; height: auto; }
+.level svg { width: 20px; height: 20px; vertical-align: -3px; margin-right: 6px; }
 .row { display: flex; gap: 12px; }
 .stat { flex: 1; min-width: 0; }
 .stat small { display: block; color: var(--muted); font-size: 12px; }
@@ -136,33 +138,34 @@ svg.chart { display: block; width: 100%; height: auto; }
     <div class="screen" id="tab-live">
       <h2>NetPulse</h2>
       <div class="card hero">
-        <div class="bars" id="bars"><i></i><i></i><i></i><i></i></div>
+        <div class="glyph" id="glyph"></div>
         <div>
           <p class="level" id="level">Measuring…</p>
           <p class="sub" id="score"></p>
-          <p class="sub" id="nettype" style="color:var(--fg);font-weight:500;margin-top:4px">Wi-Fi</p>
         </div>
       </div>
+      <p class="sec">Connection</p>
       <div class="card" style="gap:0">
-        <div class="log" style="border-top:0;padding-top:0"><span class="sub">Connection</span><b id="d-net">Wi-Fi</b></div>
-        <div class="log" id="d-wifi-row"><span class="sub">Wi-Fi name</span><b id="d-wifi">Home-WiFi</b></div>
+        <div class="log" style="border-top:0;padding-top:0"><span class="sub">Type</span><b id="d-net">Wi-Fi</b></div>
+        <div class="log" id="d-wifi-row"><span class="sub">Wi-Fi Name</span><b id="d-wifi">Home-WiFi</b></div>
         <div class="log"><span class="sub">Provider</span><b id="d-isp">Safaricom Business</b></div>
       </div>
+      <p class="sec">Last Minute</p>
       <div class="card"><div class="row">
         <div class="stat"><small>Response time</small><b id="s-lat">–</b></div>
         <div class="stat"><small>Jitter</small><b id="s-jit">–</b></div>
         <div class="stat"><small>Failed checks</small><b id="s-loss">–</b></div>
       </div></div>
+      <p class="sec">Last 2 Minutes</p>
       <div class="card">
-        <h3>Last 2 minutes</h3>
         <div id="chart-live"></div>
         <p class="sub" id="lastdrop"></p>
       </div>
-      <p class="note">Strength is worked out from how quickly and reliably the internet responds, checked every 2 seconds. iOS doesn't let apps read the raw signal level (dBm). Monitoring runs while NetPulse is open.</p>
+      <p class="note">Strength is worked out from how quickly and reliably the internet responds, checked every 2 seconds. iOS doesn't let apps read the raw signal level. Monitoring runs while NetPulse is open.</p>
     </div>
 
     <div class="screen" id="tab-speed" hidden>
-      <h2>Speed test</h2>
+      <h2>Speed Test</h2>
       <div class="card">
         <div class="big">
           <p class="sub" id="sp-phase">On Wi-Fi</p>
@@ -170,17 +173,17 @@ svg.chart { display: block; width: 100%; height: auto; }
           <p class="sub" id="sp-partial">&nbsp;</p>
         </div>
         <div class="bar"><i id="sp-bar"></i></div>
-        <button class="primary" id="sp-run">Run speed test</button>
+        <button class="primary" id="sp-run">Run Speed Test</button>
         <p class="sub bad" id="sp-err" hidden></p>
       </div>
+      <p class="sec" id="sp-latest-h">Latest Result</p>
       <div class="card" id="sp-latest" hidden>
-        <h3>Latest result</h3>
-        <p class="sub" id="r-conn" style="font-size:12px"></p>
         <div class="row"><div class="stat"><small>Download</small><b id="r-down"></b></div><div class="stat"><small>Upload</small><b id="r-up"></b></div></div>
         <div class="row"><div class="stat"><small>Ping</small><b id="r-ping"></b></div><div class="stat"><small>Jitter</small><b id="r-jit"></b></div></div>
       </div>
-      <div class="card">
-        <h3>History</h3>
+      <p class="note" id="r-conn"></p>
+      <p class="sec">History</p>
+      <div class="card" style="gap:0">
         <div id="sp-hist"></div>
       </div>
       <p class="note">The speeds on this screen are made-up examples. A browser preview can't measure your connection. On your iPhone the app runs a real test that takes about 20 seconds.</p>
@@ -193,6 +196,7 @@ svg.chart { display: block; width: 100%; height: auto; }
         <button data-w="900" aria-pressed="false">15 min</button>
         <button data-w="3600" aria-pressed="true">1 hr</button>
       </div>
+      <p class="sec">Summary</p>
       <div class="card">
         <div class="row">
           <div class="stat"><small>Uptime</small><b id="c-up">–</b></div>
@@ -205,13 +209,13 @@ svg.chart { display: block; width: 100%; height: auto; }
           <div class="stat"><small>Monitored</small><b id="c-mon">–</b></div>
         </div>
       </div>
+      <p class="sec">Response Time</p>
       <div class="card">
-        <h3>Response time</h3>
         <div id="chart-cons"></div>
         <div class="legend"><span><i style="background:var(--accent)"></i>Response time</span><span><i style="background:var(--bad)"></i>Connection dropped</span></div>
       </div>
-      <div class="card">
-        <h3>Drop log</h3>
+      <p class="sec">Drop Log</p>
+      <div class="card" style="gap:0">
         <div id="c-log"></div>
       </div>
       <p class="note">The app keeps 24 hours of history, with 6 hr and 24 hr views. This preview holds one simulated hour.</p>
@@ -291,6 +295,24 @@ svg.chart { display: block; width: 100%; height: auto; }
   function clock(t, secs) { return new Date(t).toLocaleTimeString([], secs ? { hour: 'numeric', minute: '2-digit', second: '2-digit' } : { hour: 'numeric', minute: '2-digit' }); }
   function setBars(el, n, cls) { [].forEach.call(el.children, function (b, i) { b.style.background = i < n ? 'var(--' + (cls || 'good') + ')' : ''; }); }
 
+  // Stands in for the SF Symbols the app uses: "wifi" / "cellularbars" drawn with a variable value.
+  function drawGlyph(q) {
+    var on = 'var(--' + (q.cls || 'muted') + ')', off = 'var(--line)', c = function (n) { return q.bars >= n ? on : off; }, g;
+    if (net === 'Wi-Fi') {
+      g = '<circle cx="32" cy="50" r="5" fill="' + c(1) + '"/>' +
+          '<path d="M21 39a15.5 15.5 0 0 1 22 0" stroke="' + c(2) + '"/><path d="M12 30a28 28 0 0 1 40 0" stroke="' + c(3) + '"/><path d="M3 21a41 41 0 0 1 58 0" stroke="' + c(4) + '"/>';
+    } else {
+      g = [1, 2, 3, 4].map(function (n) { return '<rect x="' + (n * 14 - 8) + '" y="' + (56 - n * 12) + '" width="10" height="' + (n * 12) + '" rx="3" fill="' + c(n) + '"/>'; }).join('');
+    }
+    if (q.cls === 'bad' && !q.bars) g += '<path d="M10 8l44 50" stroke="var(--bad)"/>';
+    $('glyph').innerHTML = '<svg viewBox="0 0 64 60" fill="none" stroke-width="6" stroke-linecap="round" aria-hidden="true">' + g + '</svg>';
+  }
+  function levelIcon(q) {
+    if (!q.cls) return '';
+    var mark = q.level === 'No connection' ? 'M7 7l6 6M13 7l-6 6' : q.cls === 'good' ? 'M6 10.5l2.8 2.8L14 7.5' : 'M10 5.5v5.5M10 14v.4';
+    return '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="currentColor"/><path d="' + mark + '" fill="none" stroke="var(--card)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
   function drawChart(el, list, sec, h) {
     var W = 330, H = h, L = 40, R = 6, T = 8, B = 20, now = Date.now(), t0 = now - sec * 1000;
     var per = Math.max(1, Math.ceil(list.length / 160)), pts = [], seg = 0, prevFail = false;
@@ -326,10 +348,9 @@ svg.chart { display: block; width: 100%; height: auto; }
     $('sb-net').textContent = net;
     $('clock').textContent = clock(Date.now()).replace(/\s?[AP]M/i, '');
     if (tab === 'live') {
-      setBars($('bars'), q.bars, q.cls);
-      $('level').textContent = q.level; $('level').className = 'level ' + q.cls;
-      $('score').textContent = q.score == null ? '' : 'Strength ' + q.score + ' / 100';
-      $('nettype').textContent = net;
+      drawGlyph(q);
+      $('level').innerHTML = levelIcon(q) + q.level; $('level').className = 'level ' + q.cls;
+      $('score').textContent = q.score == null ? '' : 'Strength ' + q.score + ' out of 100';
       $('d-net').textContent = net; $('d-wifi-row').hidden = net !== 'Wi-Fi'; $('d-isp').textContent = isp();
       $('s-lat').textContent = fms(q.med); $('s-jit').textContent = fms(q.jit);
       $('s-loss').textContent = q.loss == null ? '–' : Math.round(q.loss) + '%'; $('s-loss').className = q.loss > 0 ? 'bad' : '';
@@ -356,7 +377,7 @@ svg.chart { display: block; width: 100%; height: auto; }
 
   function renderTests() {
     var latest = tests[0];
-    $('sp-latest').hidden = !latest;
+    $('sp-latest').hidden = $('sp-latest-h').hidden = !latest;
     if (latest) {
       $('r-down').textContent = fmbps(latest.down) + ' Mbps'; $('r-up').textContent = fmbps(latest.up) + ' Mbps';
       $('r-ping').textContent = fms(latest.ping); $('r-jit').textContent = fms(latest.jit);
@@ -397,7 +418,7 @@ svg.chart { display: block; width: 100%; height: auto; }
     }, 100);
   }
   function resetSpeed() {
-    var btn = $('sp-run'); btn.textContent = 'Run speed test'; btn.classList.remove('running');
+    var btn = $('sp-run'); btn.textContent = 'Run Speed Test'; btn.classList.remove('running');
     $('sp-bar').style.width = '0'; $('sp-phase').textContent = 'On ' + net; $('sp-partial').innerHTML = '&nbsp;';
     $('sp-num').textContent = tests[0] ? fmbps(tests[0].down) : '–';
   }

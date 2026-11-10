@@ -3,109 +3,97 @@ import SwiftUI
 struct SpeedTestView: View {
     @EnvironmentObject private var monitor: ConnectionMonitor
     @EnvironmentObject private var speedTest: SpeedTestEngine
+    @State private var confirmClear = false
 
     var body: some View {
+        let isRunning = speedTest.phase.isRunning
+        let history = Array(speedTest.results.dropFirst())
+
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    Card {
-                        VStack(spacing: 16) {
-                            readout
-                            ProgressView(value: speedTest.progress)
-                                .opacity(speedTest.phase.isRunning ? 1 : 0)
-                            Button {
-                                if speedTest.phase.isRunning {
-                                    speedTest.cancel()
-                                } else {
-                                    speedTest.run(network: monitor.network, radio: monitor.radio,
-                                              wifiName: monitor.wifiName, provider: monitor.provider)
-                                }
+            List {
+                Section {
+                    VStack(spacing: Spacing.l) {
+                        readout
+                        ProgressView(value: speedTest.progress)
+                            .opacity(isRunning ? 1 : 0)
+                            .accessibilityHidden(!isRunning)
+                        if isRunning {
+                            Button(role: .cancel) {
+                                speedTest.cancel()
                             } label: {
-                                Text(speedTest.phase.isRunning ? "Cancel" : "Run speed test")
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 6)
+                                Text("Cancel").frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.large)
+                            .accessibilityIdentifier("speed.cancel")
+                        } else {
+                            Button {
+                                speedTest.run(network: monitor.network, radio: monitor.radio,
+                                              wifiName: monitor.wifiName, provider: monitor.provider)
+                            } label: {
+                                Text("Run Speed Test").frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(speedTest.phase.isRunning ? Color.gray : Color.accentColor)
-
-                            if case .failed(let message) = speedTest.phase {
-                                Text(message)
-                                    .font(.footnote)
-                                    .foregroundStyle(.red)
-                                    .multilineTextAlignment(.center)
-                            }
+                            .controlSize(.large)
+                            .accessibilityIdentifier("speed.run")
                         }
                     }
+                    .padding(.vertical, Spacing.s)
 
-                    if let latest = speedTest.results.first, !speedTest.phase.isRunning {
-                        Card {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Latest result")
-                                    .font(.headline)
-                                Text(latest.connectionSummary)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                HStack(spacing: 12) {
-                                    StatTile(label: "Download", value: "\(Format.mbps(latest.downloadMbps)) Mbps")
-                                    StatTile(label: "Upload", value: "\(Format.mbps(latest.uploadMbps)) Mbps")
-                                }
-                                HStack(spacing: 12) {
-                                    StatTile(label: "Ping", value: Format.ms(latest.pingMs))
-                                    StatTile(label: "Jitter", value: Format.ms(latest.jitterMs))
-                                }
-                            }
-                        }
+                    if case .failed(let message) = speedTest.phase {
+                        Label(message, systemImage: "exclamationmark.triangle.fill")
+                            .font(.rowTitle)
+                            .foregroundStyle(Color.statusCritical)
                     }
-
-                    if speedTest.results.count > 1 {
-                        Card {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text("History")
-                                    .font(.headline)
-                                    .padding(.bottom, 8)
-                                ForEach(speedTest.results.dropFirst()) { result in
-                                    Divider()
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(result.date.formatted(date: .abbreviated, time: .shortened))
-                                                .font(.subheadline)
-                                            Text(result.connectionSummary)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        VStack(alignment: .trailing, spacing: 2) {
-                                            Label("\(Format.mbps(result.downloadMbps)) Mbps", systemImage: "arrow.down")
-                                            Label("\(Format.mbps(result.uploadMbps)) Mbps", systemImage: "arrow.up")
-                                        }
-                                        .font(.subheadline)
-                                        .monospacedDigit()
-                                    }
-                                    .padding(.vertical, 8)
-                                }
-                            }
-                        }
-                    }
-
+                } footer: {
                     Text("A test takes about 20 seconds and uses real data: a few MB on a slow connection, several hundred MB on a very fast one. On cellular, run it only when you need to.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 4)
                 }
-                .padding(16)
+
+                if let latest = speedTest.results.first, !isRunning {
+                    Section {
+                        StatRow {
+                            StatTile(label: "Download", value: "\(Format.mbps(latest.downloadMbps)) Mbps")
+                            StatTile(label: "Upload", value: "\(Format.mbps(latest.uploadMbps)) Mbps")
+                        }
+                        StatRow {
+                            StatTile(label: "Ping", value: Format.ms(latest.pingMs))
+                            StatTile(label: "Jitter", value: Format.ms(latest.jitterMs))
+                        }
+                    } header: {
+                        Text("Latest Result")
+                    } footer: {
+                        Text(latest.connectionSummary)
+                    }
+                }
+
+                Section("History") {
+                    if history.isEmpty {
+                        ContentUnavailableView("No Earlier Tests",
+                                               systemImage: "speedometer",
+                                               description: Text("Results from your speed tests are kept here."))
+                    }
+                    ForEach(history) { result in
+                        HistoryRow(result: result)
+                    }
+                    .onDelete { offsets in
+                        speedTest.remove(ids: Set(offsets.map { history[$0].id }))
+                    }
+                }
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Speed test")
+            .navigationTitle("Speed Test")
+            .animation(.snappy, value: speedTest.phase)
+            .sensoryFeedback(.success, trigger: speedTest.results.count)
             .toolbar {
                 if !speedTest.results.isEmpty {
                     Menu {
-                        Button("Clear history", role: .destructive) { speedTest.clearHistory() }
+                        Button("Clear History", systemImage: "trash", role: .destructive) { confirmClear = true }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Label("More", systemImage: "ellipsis.circle")
                     }
                 }
+            }
+            .confirmationDialog("Delete all speed test results?", isPresented: $confirmClear, titleVisibility: .visible) {
+                Button("Delete Results", role: .destructive) { speedTest.clearHistory() }
             }
         }
     }
@@ -120,19 +108,11 @@ struct SpeedTestView: View {
     }
 
     private var readout: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: Spacing.xs) {
             Text(phaseLabel)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(bigNumber)
-                    .font(.system(size: 64, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                Text("Mbps")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-            }
+            HeroNumber(value: bigNumber, unit: "Mbps")
             if speedTest.phase == .upload, let down = speedTest.partialDownload {
                 Text("Download \(Format.mbps(down)) Mbps")
                     .font(.subheadline)
@@ -141,7 +121,6 @@ struct SpeedTestView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 8)
     }
 
     private var bigNumber: String {
@@ -152,5 +131,31 @@ struct SpeedTestView: View {
             return Format.mbps(latest.downloadMbps)
         }
         return "–"
+    }
+}
+
+private struct HistoryRow: View {
+    let result: SpeedTestResult
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.m) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(result.date.formatted(date: .abbreviated, time: .shortened))
+                    .font(.rowTitle)
+                Text(result.connectionSummary)
+                    .font(.rowDetail)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: Spacing.s)
+            VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                Label("\(Format.mbps(result.downloadMbps)) Mbps", systemImage: "arrow.down")
+                    .accessibilityLabel("Download \(Format.mbps(result.downloadMbps)) megabits per second")
+                Label("\(Format.mbps(result.uploadMbps)) Mbps", systemImage: "arrow.up")
+                    .accessibilityLabel("Upload \(Format.mbps(result.uploadMbps)) megabits per second")
+            }
+            .font(.rowTitle)
+            .monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
     }
 }

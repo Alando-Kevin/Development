@@ -134,6 +134,11 @@ final class SpeedTestEngine: ObservableObject {
         task?.cancel()
     }
 
+    func remove(ids: Set<UUID>) {
+        results.removeAll { ids.contains($0.id) }
+        Store.save(results, to: Store.speedTestsFile)
+    }
+
     func clearHistory() {
         results = []
         Store.save(results, to: Store.speedTestsFile)
