@@ -8,18 +8,24 @@ struct NetPulseApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("monitoringEnabled") private var monitoringEnabled = true
     @AppStorage("keepAwake") private var keepAwake = false
+    /// Which tab to open on. Launching with "-initialTab 3" opens the Data tab (used for screenshots).
+    @State private var selectedTab = UserDefaults.standard.integer(forKey: "initialTab")
 
     var body: some Scene {
         WindowGroup {
-            TabView {
+            TabView(selection: $selectedTab) {
                 LiveView()
                     .tabItem { Label("Live", systemImage: "waveform.path.ecg") }
+                    .tag(0)
                 SpeedTestView()
                     .tabItem { Label("Speed", systemImage: "speedometer") }
+                    .tag(1)
                 ConsistencyView()
                     .tabItem { Label("Consistency", systemImage: "chart.xyaxis.line") }
+                    .tag(2)
                 DataView()
                     .tabItem { Label("Data", systemImage: "chart.bar.fill") }
+                    .tag(3)
             }
             .environmentObject(monitor)
             .environmentObject(speedTest)
