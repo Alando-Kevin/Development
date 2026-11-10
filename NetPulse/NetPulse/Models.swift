@@ -33,6 +33,16 @@ enum WifiBand: String, CaseIterable, Identifiable {
     case band6 = "6 GHz"
 
     var id: String { rawValue }
+
+    /// Short text for the band buttons.
+    var shortLabel: String {
+        switch self {
+        case .notSet: return "Not set"
+        case .band24: return "2.4"
+        case .band5: return "5"
+        case .band6: return "6"
+        }
+    }
 }
 
 /// One connectivity check. `latencyMs` is nil when the check failed (no response in time).
@@ -266,6 +276,9 @@ enum Format {
         guard let value else { return "–" }
         return "\(Int(value.rounded())) ms"
     }
+
+    /// Currency used for bundle costs, taken from the phone's region.
+    static var currencyCode: String { Locale.current.currency?.identifier ?? "USD" }
 
     static func mbps(_ value: Double) -> String {
         value >= 100 ? String(format: "%.0f", value) : String(format: "%.1f", value)

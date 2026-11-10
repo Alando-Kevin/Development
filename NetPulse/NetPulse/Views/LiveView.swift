@@ -39,17 +39,22 @@ struct LiveView: View {
                     LabeledContent("Type", value: monitor.networkLabel)
                     if monitor.network == .wifi {
                         LabeledContent("Wi-Fi Name", value: monitor.wifiName ?? "Not available")
-                        Picker("Band", selection: $monitor.wifiBand) {
-                            ForEach(WifiBand.allCases) { Text($0.rawValue).tag($0) }
+                        VStack(alignment: .leading, spacing: Spacing.s) {
+                            Text("Band (GHz)")
+                            Picker("Band", selection: $monitor.wifiBand) {
+                                ForEach(WifiBand.allCases) { Text($0.shortLabel).tag($0) }
+                            }
+                            .pickerStyle(.segmented)
+                            .accessibilityIdentifier("live.bandPicker")
                         }
-                        .accessibilityIdentifier("live.bandPicker")
+                        .padding(.vertical, Spacing.xs)
                     }
                     LabeledContent("Provider", value: monitor.provider ?? (monitor.network == .offline ? "–" : "Looking up…"))
                 } header: {
                     Text("Connection")
                 } footer: {
                     if monitor.network == .wifi {
-                        Text("iOS doesn't tell apps which Wi-Fi band is in use. Choose it once and NetPulse remembers it for this network.")
+                        Text("Tap the band this network uses. NetPulse remembers it and labels your results with it. iOS doesn't let apps detect the band or move the iPhone to another one.")
                     }
                 }
 
@@ -81,6 +86,7 @@ struct LiveView: View {
             }
             .navigationTitle("NetPulse")
             .animation(.snappy, value: quality.score)
+            .sensoryFeedback(.impact, trigger: monitor.network == .cellular)
             .sensoryFeedback(trigger: quality.level == .offline) { _, isDown in
                 isDown ? .warning : .success
             }
