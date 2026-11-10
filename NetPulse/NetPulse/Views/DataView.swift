@@ -32,6 +32,7 @@ struct DataView: View {
                                 y: .value("Mobile data", Double(day.mobile) / 1_000_000))
                             .foregroundStyle(Color.chartLine)
                     }
+                    .chartYScale(domain: 0...max(100, (days.map(\.mobile).max() ?? 0) / 1_000_000 + 1))
                     .chartYAxis {
                         AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { value in
                             AxisGridLine()

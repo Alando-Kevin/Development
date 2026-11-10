@@ -136,6 +136,8 @@ final class ConnectionMonitor: ObservableObject {
         isMonitoring = true
         locationPermission.request()
         loop = Task { [weak self] in
+            // The first request includes connection setup, so it would look slow. Make one and discard it.
+            _ = await self?.prober.measure()
             while !Task.isCancelled {
                 guard let self else { return }
                 let started = Date()
@@ -201,17 +203,28 @@ final class ConnectionMonitor: ObservableObject {
         }
     }
 
-    /// Asks Cloudflare which provider this connection's public address belongs to.
+    /// Looks up which provider this connection's public address belongs to.
+    /// Tries Cloudflare first, then ipinfo.io if that gives no answer.
     private nonisolated static func lookupProvider() async -> String? {
-        var request = URLRequest(url: URL(string: "https://speed.cloudflare.com/meta")!)
-        request.timeoutInterval = 6
-        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        guard let (data, _) = try? await URLSession.shared.data(for: request),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let organization = json["asOrganization"] as? String, !organization.isEmpty else {
-            return nil
+        let sources: [(url: String, key: String)] = [
+            ("https://speed.cloudflare.com/meta", "asOrganization"),
+            ("https://ipinfo.io/json", "org")
+        ]
+        for source in sources {
+            guard let url = URL(string: source.url) else { continue }
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 6
+            request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+            guard let (data, _) = try? await URLSession.shared.data(for: request),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  var name = json[source.key] as? String, !name.isEmpty else { continue }
+            // ipinfo prefixes the network number, e.g. "AS33771 Safaricom Limited".
+            if name.hasPrefix("AS"), let space = name.firstIndex(of: " ") {
+                name = String(name[name.index(after: space)...])
+            }
+            return name
         }
-        return organization
+        return nil
     }
 
     private func refreshRadio() {

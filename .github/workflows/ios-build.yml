@@ -36,9 +36,17 @@ jobs:
           xcrun simctl install "$UDID" "$APP"
           xcrun simctl privacy "$UDID" grant location "$BUNDLE"
           mkdir -p docs/screenshots
+          echo "Provider lookup check:"
+          curl -s -m 10 https://speed.cloudflare.com/meta | head -c 400 || true; echo
+          curl -s -m 10 https://ipinfo.io/json | grep -E '"org"' || true
           index=0
           for name in live speed consistency data; do
-            xcrun simctl launch "$UDID" "$BUNDLE" -initialTab "$index"
+            if [ "$name" = speed ]; then
+              xcrun simctl launch "$UDID" "$BUNDLE" -initialTab "$index" -autoRunSpeedTest YES
+              sleep 20
+            else
+              xcrun simctl launch "$UDID" "$BUNDLE" -initialTab "$index"
+            fi
             sleep 20
             xcrun simctl io "$UDID" screenshot "docs/screenshots/$name.png"
             # terminate fails if the app is no longer running, which means it crashed

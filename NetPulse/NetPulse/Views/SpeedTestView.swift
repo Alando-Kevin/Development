@@ -81,6 +81,13 @@ struct SpeedTestView: View {
                 }
             }
             .navigationTitle("Speed Test")
+            .onAppear {
+                // Launching with "-autoRunSpeedTest YES" starts a test straight away (used for automated checks).
+                if UserDefaults.standard.bool(forKey: "autoRunSpeedTest"), speedTest.results.isEmpty, !isRunning {
+                    speedTest.run(network: monitor.network, radio: monitor.radio,
+                                  wifiName: monitor.wifiName, provider: monitor.provider)
+                }
+            }
             .animation(.snappy, value: speedTest.phase)
             .sensoryFeedback(.success, trigger: speedTest.results.count)
             .toolbar {
