@@ -1,0 +1,424 @@
+<title>NetPulse Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: demo controls beside an iPhone-sized frame running the three app screens; stacks to one column on a phone. */
+:root {
+  --bg: #e9edf3;
+  --panel: #f3f5f9;       /* app grouped background */
+  --card: #ffffff;
+  --fg: #141a26;
+  --muted: #5f6b7e;
+  --line: #d6dce6;
+  --accent: #2d6be4;
+  --accent-fg: #ffffff;
+  --good: #1f9d55;
+  --warn: #c77700;
+  --bad: #d63a3a;
+  --bad-soft: rgba(214, 58, 58, 0.18);
+  --bezel: #1b2130;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-num: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d111a; --panel: #080b12; --card: #1a2030; --fg: #eef1f7; --muted: #98a3b6; --line: #2c3446;
+    --accent: #6ba1ff; --accent-fg: #0a1020; --good: #46c57c; --warn: #f0a63a; --bad: #ff6b63;
+    --bad-soft: rgba(255, 107, 99, 0.22); --bezel: #2b3347; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d111a; --panel: #080b12; --card: #1a2030; --fg: #eef1f7; --muted: #98a3b6; --line: #2c3446;
+  --accent: #6ba1ff; --accent-fg: #0a1020; --good: #46c57c; --warn: #f0a63a; --bad: #ff6b63;
+  --bad-soft: rgba(255, 107, 99, 0.22); --bezel: #2b3347; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.45;
+  padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stage { max-width: 900px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; justify-content: center; }
+.side { flex: 1 1 280px; min-width: 0; max-width: 420px; display: flex; flex-direction: column; gap: 18px; padding-top: 8px; }
+.side h1 { font-size: 28px; line-height: 1.15; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+.side p { margin: 0; color: var(--muted); }
+.tag { align-self: flex-start; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--warn); border: 1px solid var(--warn); border-radius: 999px; padding: 2px 10px; }
+.controls { display: flex; flex-direction: column; gap: 8px; }
+.controls h2 { font-size: 13px; font-weight: 600; margin: 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.ctl { text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.ctl:hover { border-color: var(--accent); }
+.ctl b { display: block; font-weight: 600; }
+.ctl span { color: var(--muted); font-size: 13px; }
+
+.phone { flex: 0 0 auto; width: min(390px, 100%); height: 800px; max-height: 92vh; background: var(--panel);
+  border: 10px solid var(--bezel); border-radius: 48px; overflow: hidden; display: flex; flex-direction: column; }
+.status { display: flex; justify-content: space-between; align-items: center; padding: 12px 26px 4px; font-weight: 600; font-size: 14px; }
+.status .net { display: flex; gap: 6px; align-items: center; font-variant-numeric: tabular-nums; }
+.screen { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.screen[hidden], [hidden] { display: none !important; }
+.screen > * { flex-shrink: 0; }
+.screen h2 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 6px 0 0; }
+.card { background: var(--card); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.card h3 { font-size: 16px; font-weight: 600; margin: 0; }
+.row { display: flex; gap: 12px; }
+.stat { flex: 1; min-width: 0; }
+.stat small { display: block; color: var(--muted); font-size: 12px; }
+.stat b { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.note { color: var(--muted); font-size: 12.5px; margin: 0; padding: 0 4px; }
+.sub { color: var(--muted); font-size: 14px; margin: 0; font-variant-numeric: tabular-nums; }
+.good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+
+.hero { flex-direction: row; align-items: center; gap: 20px; }
+.bars { display: flex; align-items: flex-end; gap: 7px; height: 64px; }
+.bars i { width: 13px; border-radius: 4px; background: var(--line); }
+.bars i:nth-child(1) { height: 40%; } .bars i:nth-child(2) { height: 60%; } .bars i:nth-child(3) { height: 80%; } .bars i:nth-child(4) { height: 100%; }
+.bars.sm { height: 14px; gap: 2px; } .bars.sm i { width: 3px; border-radius: 1px; }
+.level { font-size: 22px; font-weight: 700; margin: 0; }
+
+.seg { display: flex; background: var(--line); border-radius: 9px; padding: 2px; }
+.seg button { flex: 1; border: 0; background: transparent; border-radius: 7px; padding: 5px 0; font-size: 13px; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--card); font-weight: 600; }
+
+.big { text-align: center; padding-top: 6px; }
+.big .num { font-family: var(--font-num); font-size: 64px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.big .unit { color: var(--muted); font-size: 18px; margin-left: 4px; }
+.bar { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.primary { border: 0; border-radius: 12px; padding: 13px; background: var(--accent); color: var(--accent-fg); font-weight: 600; font-size: 16px; }
+.primary.running { background: var(--muted); }
+
+.log { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid var(--line); padding: 8px 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+.log:last-child { padding-bottom: 0; }
+.log small { display: block; color: var(--muted); font-size: 12px; }
+.log .r { text-align: right; white-space: nowrap; }
+.legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+svg.chart { display: block; width: 100%; height: auto; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart text { fill: var(--muted); font-size: 10px; font-family: var(--font); }
+.chart .lat { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .dot { fill: var(--accent); }
+.chart .drop { fill: var(--bad-soft); }
+.chart .dropline { stroke: var(--bad); stroke-width: 1.5; }
+
+.tabs { display: flex; border-top: 1px solid var(--line); background: var(--card); padding: 6px 8px 14px; }
+.tabs button { flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 500; color: var(--muted); padding: 4px 0; border-radius: 8px; }
+.tabs button[aria-selected="true"] { color: var(--accent); }
+.tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 720px) {
+  .side { max-width: none; flex-basis: 100%; }
+  .phone { border-width: 6px; border-radius: 36px; height: 760px; }
+}
+</style>
+
+<div class="stage">
+  <div class="side">
+    <span class="tag">Simulated data</span>
+    <h1>NetPulse, the iPhone app, as a clickable prototype</h1>
+    <p>The three screens here match the SwiftUI app in the repo. The numbers are generated in your browser so you can see how the app reacts. On your iPhone they come from real measurements.</p>
+    <div class="controls">
+      <h2>Try it</h2>
+      <button class="ctl" id="ctl-drop"><b>Cut the connection for 10 seconds</b><span>Watch the bars empty, the chart turn red, and the drop land in the log.</span></button>
+      <button class="ctl" id="ctl-slow"><b>Make it slow for 20 seconds</b><span>Response times climb and strength falls without a full drop.</span></button>
+      <button class="ctl" id="ctl-net"><b>Switch to 5G</b><span>Changes the connection type the app reports.</span></button>
+    </div>
+    <p id="ctl-status" role="status">Monitoring a healthy Wi-Fi connection. One check every 2 seconds.</p>
+  </div>
+
+  <div class="phone" aria-label="iPhone preview">
+    <div class="status"><span id="clock">9:41</span><span class="net"><span class="bars sm" id="sb-bars"><i></i><i></i><i></i><i></i></span><span id="sb-net">Wi-Fi</span></span></div>
+
+    <div class="screen" id="tab-live">
+      <h2>NetPulse</h2>
+      <div class="card hero">
+        <div class="bars" id="bars"><i></i><i></i><i></i><i></i></div>
+        <div>
+          <p class="level" id="level">Measuring…</p>
+          <p class="sub" id="score"></p>
+          <p class="sub" id="nettype" style="color:var(--fg);font-weight:500;margin-top:4px">Wi-Fi</p>
+        </div>
+      </div>
+      <div class="card"><div class="row">
+        <div class="stat"><small>Response time</small><b id="s-lat">–</b></div>
+        <div class="stat"><small>Jitter</small><b id="s-jit">–</b></div>
+        <div class="stat"><small>Failed checks</small><b id="s-loss">–</b></div>
+      </div></div>
+      <div class="card">
+        <h3>Last 2 minutes</h3>
+        <div id="chart-live"></div>
+        <p class="sub" id="lastdrop"></p>
+      </div>
+      <p class="note">Strength is worked out from how quickly and reliably the internet responds, checked every 2 seconds. iOS doesn't let apps read the raw signal level (dBm). Monitoring runs while NetPulse is open.</p>
+    </div>
+
+    <div class="screen" id="tab-speed" hidden>
+      <h2>Speed test</h2>
+      <div class="card">
+        <div class="big">
+          <p class="sub" id="sp-phase">On Wi-Fi</p>
+          <div><span class="num" id="sp-num">–</span><span class="unit">Mbps</span></div>
+          <p class="sub" id="sp-partial">&nbsp;</p>
+        </div>
+        <div class="bar"><i id="sp-bar"></i></div>
+        <button class="primary" id="sp-run">Run speed test</button>
+        <p class="sub bad" id="sp-err" hidden></p>
+      </div>
+      <div class="card" id="sp-latest" hidden>
+        <h3>Latest result</h3>
+        <div class="row"><div class="stat"><small>Download</small><b id="r-down"></b></div><div class="stat"><small>Upload</small><b id="r-up"></b></div></div>
+        <div class="row"><div class="stat"><small>Ping</small><b id="r-ping"></b></div><div class="stat"><small>Jitter</small><b id="r-jit"></b></div></div>
+      </div>
+      <div class="card">
+        <h3>History</h3>
+        <div id="sp-hist"></div>
+      </div>
+      <p class="note">On your iPhone a test takes about 20 seconds and uses real data. This preview runs a shortened, simulated test.</p>
+    </div>
+
+    <div class="screen" id="tab-cons" hidden>
+      <h2>Consistency</h2>
+      <div class="seg" id="range">
+        <button data-w="300" aria-pressed="false">5 min</button>
+        <button data-w="900" aria-pressed="false">15 min</button>
+        <button data-w="3600" aria-pressed="true">1 hr</button>
+      </div>
+      <div class="card">
+        <div class="row">
+          <div class="stat"><small>Uptime</small><b id="c-up">–</b></div>
+          <div class="stat"><small>Drops</small><b id="c-drops">–</b></div>
+          <div class="stat"><small>Longest drop</small><b id="c-long">–</b></div>
+        </div>
+        <div class="row">
+          <div class="stat"><small>Avg response</small><b id="c-avg">–</b></div>
+          <div class="stat"><small>Jitter</small><b id="c-jit">–</b></div>
+          <div class="stat"><small>Monitored</small><b id="c-mon">–</b></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Response time</h3>
+        <div id="chart-cons"></div>
+        <div class="legend"><span><i style="background:var(--accent)"></i>Response time</span><span><i style="background:var(--bad)"></i>Connection dropped</span></div>
+      </div>
+      <div class="card">
+        <h3>Drop log</h3>
+        <div id="c-log"></div>
+      </div>
+      <p class="note">The app keeps 24 hours of history, with 6 hr and 24 hr views. This preview holds one simulated hour.</p>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="live" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M2 12h4l3-7 4 14 3-7h6"/></svg>Live</button>
+      <button role="tab" data-tab="speed" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-6"/></svg>Speed</button>
+      <button role="tab" data-tab="cons" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7 14l3-4 3 2 2-5 4 3"/></svg>Consistency</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var INTERVAL = 2, GAP = 12;
+  var net = 'Wi-Fi', dropLeft = 0, slowLeft = 0, samples = [], tab = 'live', windowSec = 3600;
+  var tests = [];
+
+  function latencyFor(n, slow) {
+    var base = n === 'Wi-Fi' ? 22 : 38;
+    var v = base + Math.random() * 10 + (Math.random() < 0.06 ? Math.random() * 70 : 0);
+    if (slow) v = 260 + Math.random() * 380;
+    return v;
+  }
+
+  // Seed one hour of history with three drops so the Consistency screen has something to show.
+  (function seed() {
+    var now = Date.now(), seeded = [[47 * 60, 8], [22 * 60, 26], [9 * 60, 4]];
+    for (var s = 3600; s > 0; s -= INTERVAL) {
+      var failed = seeded.some(function (d) { return s <= d[0] && s > d[0] - d[1]; });
+      var rough = s < 22 * 60 + 40 && s > 22 * 60 - 60;
+      samples.push({ t: now - s * 1000, ms: failed ? null : latencyFor('Wi-Fi', rough && Math.random() < 0.5), net: 'Wi-Fi' });
+    }
+    var day = 86400000;
+    tests = [
+      { t: now - 0.2 * day, down: 236.4, up: 37.9, ping: 18, jit: 3, net: 'Wi-Fi' },
+      { t: now - 1.1 * day, down: 412.7, up: 51.2, ping: 33, jit: 6, net: '5G' },
+      { t: now - 2.3 * day, down: 88.3, up: 21.6, ping: 24, jit: 9, net: 'Wi-Fi' }
+    ];
+  })();
+
+  function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+  function jitter(a) { if (a.length < 2) return null; var t = 0; for (var i = 1; i < a.length; i++) t += Math.abs(a[i] - a[i - 1]); return t / (a.length - 1); }
+  function inLast(sec) { var c = Date.now() - sec * 1000, i = samples.length; while (i > 0 && samples[i - 1].t > c) i--; return samples.slice(i); }
+
+  // Same scoring as Analysis.quality in Models.swift.
+  function quality(list) {
+    if (!list.length) return { level: 'Measuring…', cls: '', bars: 0, score: null };
+    var lat = list.filter(function (s) { return s.ms != null; }).map(function (s) { return s.ms; });
+    var loss = (list.length - lat.length) / list.length * 100;
+    var tail = list.slice(-2), tailFailed = tail.every(function (s) { return s.ms == null; });
+    var med = median(lat), jit = jitter(lat);
+    if (!lat.length || tailFailed) return { level: 'No connection', cls: 'bad', bars: 0, score: 0, med: med, jit: jit, loss: loss };
+    var score = Math.round(Math.max(1, 100 - Math.min(40, Math.max(0, (med - 30) / 270 * 40)) - Math.min(20, Math.max(0, ((jit || 0) - 5) / 95 * 20)) - Math.min(60, loss * 2)));
+    var q = score >= 85 ? ['Excellent', 'good', 4] : score >= 65 ? ['Good', 'good', 3] : score >= 40 ? ['Fair', 'warn', 2] : ['Poor', 'bad', 1];
+    return { level: q[0], cls: q[1], bars: q[2], score: score, med: med, jit: jit, loss: loss };
+  }
+
+  function drops(list) {
+    var out = [], start = null, last = null;
+    list.forEach(function (s) {
+      if (last && s.t - last.t > GAP * 1000) { out.push({ start: start.t, end: last.t + 2000, net: start.net }); start = last = null; }
+      if (s.ms == null) { if (!start) start = s; last = s; }
+      else if (start) { out.push({ start: start.t, end: s.t, net: start.net }); start = last = null; }
+    });
+    if (start) out.push({ start: start.t, end: last.t + 2000, net: start.net, ongoing: true });
+    return out;
+  }
+
+  function dur(ms) { var s = Math.max(1, Math.round(ms / 1000)); return s < 60 ? s + 's' : s < 3600 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm'; }
+  function fms(v) { return v == null ? '–' : Math.round(v) + ' ms'; }
+  function fmbps(v) { return v >= 100 ? v.toFixed(0) : v.toFixed(1); }
+  function clock(t, secs) { return new Date(t).toLocaleTimeString([], secs ? { hour: 'numeric', minute: '2-digit', second: '2-digit' } : { hour: 'numeric', minute: '2-digit' }); }
+  function setBars(el, n, cls) { [].forEach.call(el.children, function (b, i) { b.style.background = i < n ? 'var(--' + (cls || 'good') + ')' : ''; }); }
+
+  function drawChart(el, list, sec, h) {
+    var W = 330, H = h, L = 40, R = 6, T = 8, B = 20, now = Date.now(), t0 = now - sec * 1000;
+    var per = Math.max(1, Math.ceil(list.length / 160)), pts = [], seg = 0, prevFail = false;
+    for (var i = 0; i < list.length; i += per) {
+      var b = list.slice(i, i + per).filter(function (s) { return s.ms != null; });
+      if (!b.length) { prevFail = true; continue; }
+      if (prevFail) seg++;
+      prevFail = false;
+      pts.push({ t: list[i].t, ms: b.reduce(function (a, s) { return a + s.ms; }, 0) / b.length, seg: seg });
+    }
+    var peak = Math.max(100, Math.max.apply(null, pts.map(function (p) { return p.ms; }).concat([0])) * 1.15);
+    var step = peak <= 120 ? 25 : peak <= 260 ? 50 : peak <= 520 ? 100 : 200;
+    var x = function (t) { return L + (Math.max(t0, Math.min(now, t)) - t0) / (now - t0) * (W - L - R); };
+    var y = function (v) { return T + (1 - v / peak) * (H - T - B); };
+    var s = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Response time chart">';
+    for (var v = 0; v <= peak; v += step) s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (L - 5) + '" y="' + (y(v) + 3) + '" text-anchor="end">' + v + ' ms</text>';
+    for (var k = 0; k <= 3; k++) { var tt = t0 + (now - t0) * k / 3; s += '<text x="' + x(tt) + '" y="' + (H - 5) + '" text-anchor="' + (k === 0 ? 'start' : k === 3 ? 'end' : 'middle') + '">' + clock(tt, sec <= 600) + '</text>'; }
+    drops(list).forEach(function (d) {
+      var x1 = x(d.start), x2 = Math.max(x1 + 1.5, x(d.end));
+      s += '<rect class="drop" x="' + x1 + '" y="' + T + '" width="' + (x2 - x1) + '" height="' + (H - T - B) + '"/><line class="dropline" x1="' + x1 + '" x2="' + x1 + '" y1="' + T + '" y2="' + (H - B) + '"/>';
+    });
+    var path = '', cur = -1;
+    pts.forEach(function (p) { path += (p.seg !== cur ? 'M' : 'L') + x(p.t).toFixed(1) + ' ' + y(p.ms).toFixed(1); cur = p.seg; });
+    s += '<path class="lat" d="' + path + '"/>';
+    var lp = pts[pts.length - 1];
+    if (lp && now - lp.t < 5000) s += '<circle class="dot" cx="' + x(lp.t) + '" cy="' + y(lp.ms) + '" r="3.5"/>';
+    el.innerHTML = s + '</svg>';
+  }
+
+  function render() {
+    var q = quality(inLast(60).slice(-40));
+    setBars($('sb-bars'), q.bars, 'fg');
+    $('sb-net').textContent = net;
+    $('clock').textContent = clock(Date.now()).replace(/\s?[AP]M/i, '');
+    if (tab === 'live') {
+      setBars($('bars'), q.bars, q.cls);
+      $('level').textContent = q.level; $('level').className = 'level ' + q.cls;
+      $('score').textContent = q.score == null ? '' : 'Strength ' + q.score + ' / 100';
+      $('nettype').textContent = net;
+      $('s-lat').textContent = fms(q.med); $('s-jit').textContent = fms(q.jit);
+      $('s-loss').textContent = q.loss == null ? '–' : Math.round(q.loss) + '%'; $('s-loss').className = q.loss > 0 ? 'bad' : '';
+      drawChart($('chart-live'), inLast(120), 120, 150);
+      var d = drops(inLast(3600)).pop(), ld = $('lastdrop');
+      if (d && d.ongoing) { ld.textContent = 'Connection down for ' + dur(d.end - d.start); ld.className = 'sub bad'; }
+      else { ld.textContent = d ? 'Last drop ' + clock(d.end) + ', lasted ' + dur(d.end - d.start) : 'No drops in the last hour'; ld.className = 'sub'; }
+    }
+    if (tab === 'cons') {
+      var list = inLast(windowSec), lat = list.filter(function (s) { return s.ms != null; }).map(function (s) { return s.ms; }), ds = drops(list);
+      var up = list.length ? lat.length / list.length * 100 : null;
+      $('c-up').textContent = up == null ? '–' : up.toFixed(1) + '%'; $('c-up').className = up == null ? '' : up >= 99.5 ? 'good' : up >= 97 ? 'warn' : 'bad';
+      $('c-drops').textContent = ds.length; $('c-drops').className = ds.length ? 'bad' : '';
+      $('c-long').textContent = ds.length ? dur(Math.max.apply(null, ds.map(function (d) { return d.end - d.start; }))) : '–';
+      $('c-avg').textContent = fms(lat.length ? lat.reduce(function (a, b) { return a + b; }, 0) / lat.length : null);
+      $('c-jit').textContent = fms(jitter(lat));
+      $('c-mon').textContent = list.length > 1 ? dur(list[list.length - 1].t - list[0].t) : '–';
+      drawChart($('chart-cons'), list, windowSec, 210);
+      $('c-log').innerHTML = ds.length ? ds.reverse().map(function (d) {
+        return '<div class="log"><div>' + clock(d.start, true) + '<small>On ' + d.net + '</small></div><div class="r bad"><b>' + (d.ongoing ? 'Ongoing · ' : '') + dur(d.end - d.start) + '</b></div></div>';
+      }).join('') : '<p class="sub">No drops in this period.</p>';
+    }
+  }
+
+  function renderTests() {
+    var latest = tests[0];
+    $('sp-latest').hidden = !latest;
+    if (latest) {
+      $('r-down').textContent = fmbps(latest.down) + ' Mbps'; $('r-up').textContent = fmbps(latest.up) + ' Mbps';
+      $('r-ping').textContent = fms(latest.ping); $('r-jit').textContent = fms(latest.jit);
+    }
+    $('sp-hist').innerHTML = tests.slice(1).map(function (r) {
+      return '<div class="log"><div>' + new Date(r.t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '<small>' + r.net + '</small></div><div class="r">↓ ' + fmbps(r.down) + ' Mbps<br>↑ ' + fmbps(r.up) + ' Mbps</div></div>';
+    }).join('');
+  }
+
+  function tick() {
+    var failed = dropLeft > 0, slow = slowLeft > 0;
+    samples.push({ t: Date.now(), ms: failed ? null : latencyFor(net, slow), net: net });
+    if (samples.length > 2000) samples.shift();
+    if (dropLeft > 0 && --dropLeft === 0) $('ctl-status').textContent = 'Connection is back. The drop is now in the Consistency log.';
+    if (slowLeft > 0 && --slowLeft === 0) $('ctl-status').textContent = 'Speed is back to normal.';
+    render();
+  }
+
+  // Simulated speed test: ping, then download, then upload.
+  var running = null;
+  function runTest() {
+    if (running) { clearInterval(running); running = null; resetSpeed(); return; }
+    if (dropLeft > 0) { $('sp-err').hidden = false; $('sp-err').textContent = "Couldn't reach the speed test server. Check your connection and try again."; return; }
+    $('sp-err').hidden = true;
+    var f = slowLeft > 0 ? 0.07 : 1, wifi = net === 'Wi-Fi';
+    var goal = { down: (wifi ? 240 : 410) * f * (0.9 + Math.random() * 0.2), up: (wifi ? 38 : 52) * f * (0.9 + Math.random() * 0.2),
+                 ping: (wifi ? 18 : 32) / Math.sqrt(f) + Math.random() * 4, jit: 2 + Math.random() * 5 / f };
+    var t = 0, total = 70, btn = $('sp-run');
+    btn.textContent = 'Cancel'; btn.classList.add('running'); $('sp-partial').innerHTML = '&nbsp;';
+    running = setInterval(function () {
+      t++;
+      $('sp-bar').style.width = (t / total * 100) + '%';
+      if (t <= 10) { $('sp-phase').textContent = 'Checking ping…'; $('sp-num').textContent = '–'; }
+      else if (t <= 40) { $('sp-phase').textContent = 'Testing download'; $('sp-num').textContent = fmbps(goal.down * Math.min(1, (t - 10) / 8) * (0.93 + Math.random() * 0.14)); }
+      else if (t < total) { $('sp-phase').textContent = 'Testing upload'; $('sp-partial').textContent = 'Download ' + fmbps(goal.down) + ' Mbps'; $('sp-num').textContent = fmbps(goal.up * Math.min(1, (t - 40) / 8) * (0.93 + Math.random() * 0.14)); }
+      else { clearInterval(running); running = null; tests.unshift({ t: Date.now(), down: goal.down, up: goal.up, ping: goal.ping, jit: goal.jit, net: net }); resetSpeed(); renderTests(); }
+    }, 100);
+  }
+  function resetSpeed() {
+    var btn = $('sp-run'); btn.textContent = 'Run speed test'; btn.classList.remove('running');
+    $('sp-bar').style.width = '0'; $('sp-phase').textContent = 'On ' + net; $('sp-partial').innerHTML = '&nbsp;';
+    $('sp-num').textContent = tests[0] ? fmbps(tests[0].down) : '–';
+  }
+
+  document.querySelectorAll('.tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      tab = b.dataset.tab;
+      document.querySelectorAll('.tabs button').forEach(function (o) { o.setAttribute('aria-selected', o === b); });
+      ['live', 'speed', 'cons'].forEach(function (n) { $('tab-' + n).hidden = n !== tab; });
+      render();
+    });
+  });
+  document.querySelectorAll('#range button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      windowSec = +b.dataset.w;
+      document.querySelectorAll('#range button').forEach(function (o) { o.setAttribute('aria-pressed', o === b); });
+      render();
+    });
+  });
+  $('ctl-drop').addEventListener('click', function () { dropLeft = 5; $('ctl-status').textContent = 'Connection cut. Checks are failing for the next 10 seconds.'; });
+  $('ctl-slow').addEventListener('click', function () { slowLeft = 10; $('ctl-status').textContent = 'Connection slowed. Response times are climbing for 20 seconds.'; });
+  $('ctl-net').addEventListener('click', function () {
+    net = net === 'Wi-Fi' ? '5G' : 'Wi-Fi';
+    this.querySelector('b').textContent = 'Switch to ' + (net === 'Wi-Fi' ? '5G' : 'Wi-Fi');
+    $('ctl-status').textContent = 'Now on ' + net + '.';
+    if (!running) resetSpeed();
+    render();
+  });
+  $('sp-run').addEventListener('click', runTest);
+
+  renderTests(); resetSpeed(); render();
+  setInterval(tick, INTERVAL * 1000);
+})();
+</script>

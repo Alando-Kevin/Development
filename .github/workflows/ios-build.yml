@@ -1,0 +1,20 @@
+name: iOS build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "NetPulse/**"
+      - ".github/workflows/ios-build.yml"
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild -project NetPulse/NetPulse.xcodeproj -target NetPulse \
+            -sdk iphonesimulator -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO build
