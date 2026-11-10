@@ -231,19 +231,18 @@ svg.chart { display: block; width: 100%; height: auto; }
         <div class="stat"><small>7 days</small><b id="u-7"></b></div>
         <div class="stat"><small>30 days</small><b id="u-30"></b></div>
       </div></div>
-      <p class="sec">Data Bundle</p>
+      <p class="sec">Data Bundles</p>
       <div class="card">
-        <div class="bar" style="height:6px;border-radius:3px"><i id="b-bar"></i></div>
-        <p class="sub" id="b-used" style="color:var(--fg)"></p>
-        <div class="log"><span class="sub">Should be left</span><b id="b-left"></b></div>
+        <div id="b-list" style="display:flex;flex-direction:column;gap:12px"></div>
+        <div class="log"><span class="sub">Should be left in total</span><b id="b-left"></b></div>
         <div id="b-result" hidden></div>
         <div class="log" style="gap:8px"><label class="sub" for="b-input">Provider says left (MB)</label>
-          <input id="b-input" type="number" inputmode="decimal" min="0" value="2850" style="width:90px;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg)"></div>
+          <input id="b-input" type="number" inputmode="decimal" min="0" value="4850" style="width:90px;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg)"></div>
         <button class="primary" id="b-check">Compare With Provider Balance</button>
       </div>
       <p class="sec">Network Changes</p>
       <div class="card" style="gap:0" id="sw-log"></div>
-      <p class="note">Figures cover everything the iPhone used, including while NetPulse was closed. iOS doesn't show apps which app used the data. Use the Switch button beside the phone to see a change logged here.</p>
+      <p class="note">Figures cover everything the iPhone used, including while NetPulse was closed. With more than one bundle, usage comes off the one that expires first. Use the Switch button beside the phone to see a change logged here.</p>
     </div>
 
     <div class="tabs" role="tablist">
@@ -261,7 +260,9 @@ svg.chart { display: block; width: 100%; height: auto; }
   var INTERVAL = 2, GAP = 12;
   var net = 'Wi-Fi', dropLeft = 0, slowLeft = 0, samples = [], tab = 'live', windowSec = 3600;
   var tests = [], band = '2.4 GHz', MB = 1e6, mobToday = 212 * MB, mob7 = 1460 * MB, mob30 = 5230 * MB, sinceSwitch = 0;
-  var bundle = { size: 5000 * MB, used: 1840 * MB, check: null }, switches = [];
+  var bundles = [{ size: 2000 * MB, used: 1840 * MB, exp: 'Expires in 2 days' }, { size: 5000 * MB, used: 0, exp: 'Expires in 27 days' }], check = null, switches = [];
+  function totalLeft() { return bundles.reduce(function (a, b) { return a + Math.max(0, b.size - b.used); }, 0); }
+  function totalSize() { return bundles.reduce(function (a, b) { return a + b.size; }, 0); }
 
   function latencyFor(n, slow) {
     var base = n === 'Wi-Fi' ? 22 : 38;
@@ -389,15 +390,17 @@ svg.chart { display: block; width: 100%; height: auto; }
     }
     if (tab === 'data') {
       $('u-today').textContent = fbytes(mobToday); $('u-7').textContent = fbytes(mob7); $('u-30').textContent = fbytes(mob30);
-      var left = Math.max(0, bundle.size - bundle.used);
-      $('b-bar').style.width = Math.min(100, bundle.used / bundle.size * 100) + '%';
-      $('b-used').textContent = fbytes(bundle.used) + ' used of ' + fbytes(bundle.size);
-      $('b-left').textContent = fbytes(left);
-      var c = bundle.check, r = $('b-result'); r.hidden = !c;
+      var inUse = bundles.filter(function (b) { return b.used < b.size; })[0];
+      $('b-list').innerHTML = bundles.map(function (b) {
+        return '<div><div class="bar" style="height:6px;border-radius:3px"><i style="width:' + Math.min(100, b.used / b.size * 100) + '%"></i></div>' +
+          '<p class="sub" style="color:var(--fg);margin-top:8px">' + fbytes(b.used) + ' used of ' + fbytes(b.size) + '</p><p class="sub" style="font-size:12px">' + (b === inUse ? 'In use now · ' : '') + b.exp + '</p></div>';
+      }).join('');
+      $('b-left').textContent = fbytes(totalLeft());
+      var c = check, r = $('b-result'); r.hidden = !c;
       if (c) {
-        var diff = c.measured - c.reported, flagged = Math.abs(diff) > Math.max(50 * MB, bundle.size / 20);
+        var diff = c.measured - c.reported, flagged = Math.abs(diff) > Math.max(50 * MB, totalSize() / 20);
         var head = !flagged ? ['good', 'Provider balance matches'] : diff > 0 ? ['bad', 'Provider shows ' + fbytes(diff) + ' less than expected'] : ['warn', 'Provider shows ' + fbytes(-diff) + ' more than expected'];
-        var why = !flagged ? '' : diff > 0 ? ' More was deducted than this iPhone used. Personal Hotspot, another device on the same line, or a restart before NetPulse was opened can explain it. If none apply, raise it with your provider.' : ' You may have bonus data, or the bundle was larger than entered.';
+        var why = !flagged ? '' : diff > 0 ? ' More was deducted than this iPhone used. Personal Hotspot, another device on the same line, or a restart before NetPulse was opened can explain it. If none apply, raise it with your provider.' : ' You may have bonus data, or a bundle that isn\'t entered here.';
         r.innerHTML = '<div class="log" style="display:block"><b class="' + head[0] + '">' + head[1] + '</b><small>Provider: ' + fbytes(c.reported) + ' left. Measured: ' + fbytes(c.measured) + ' left.' + why + '</small></div>';
       }
       $('sw-log').innerHTML = switches.length ? switches.map(function (e, i) {
@@ -437,7 +440,7 @@ svg.chart { display: block; width: 100%; height: auto; }
     var failed = dropLeft > 0, slow = slowLeft > 0;
     samples.push({ t: Date.now(), ms: failed ? null : latencyFor(net, slow), net: net });
     if (samples.length > 2000) samples.shift();
-    if (net === '5G' && !failed) { var u = (0.4 + Math.random() * 1.6) * MB; mobToday += u; mob7 += u; mob30 += u; sinceSwitch += u; bundle.used += u; }
+    if (net === '5G' && !failed) { var u = (0.4 + Math.random() * 1.6) * MB; mobToday += u; mob7 += u; mob30 += u; sinceSwitch += u; bundles.forEach(function (b) { var t = Math.min(u, Math.max(0, b.size - b.used)); b.used += t; u -= t; }); }
     if (dropLeft > 0 && --dropLeft === 0) $('ctl-status').textContent = 'Connection is back. The drop is now in the Consistency log.';
     if (slowLeft > 0 && --slowLeft === 0) $('ctl-status').textContent = 'Speed is back to normal.';
     render();
@@ -498,7 +501,7 @@ svg.chart { display: block; width: 100%; height: auto; }
   $('b-check').addEventListener('click', function () {
     var v = parseFloat($('b-input').value);
     if (isNaN(v) || v < 0) return;
-    bundle.check = { reported: v * MB, measured: Math.max(0, bundle.size - bundle.used) };
+    check = { reported: v * MB, measured: totalLeft() };
     render();
   });
   document.querySelectorAll('#band button').forEach(function (b) {

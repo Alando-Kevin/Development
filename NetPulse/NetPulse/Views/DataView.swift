@@ -5,7 +5,7 @@ struct DataView: View {
     @EnvironmentObject private var usage: DataUsageTracker
     @State private var showAddBundle = false
     @State private var showBalanceCheck = false
-    @State private var confirmEnd = false
+    @State private var bundleToEnd: DataBundle?
     @ScaledMetric private var chartHeight = ChartSize.compact
 
     var body: some View {
@@ -84,60 +84,95 @@ struct DataView: View {
             .sheet(isPresented: $showBalanceCheck) {
                 BalanceCheckSheet()
             }
-            .confirmationDialog("Stop tracking this bundle?", isPresented: $confirmEnd, titleVisibility: .visible) {
-                Button("End Bundle", role: .destructive) { usage.endActiveBundle() }
+            .confirmationDialog("Stop tracking this bundle?",
+                                isPresented: Binding(get: { bundleToEnd != nil }, set: { if !$0 { bundleToEnd = nil } }),
+                                titleVisibility: .visible) {
+                Button("End Bundle", role: .destructive) {
+                    if let bundle = bundleToEnd { usage.endBundle(id: bundle.id) }
+                    bundleToEnd = nil
+                }
             }
         }
     }
 
     @ViewBuilder
     private var bundleSection: some View {
-        Section {
-            if let bundle = usage.activeBundle {
-                VStack(alignment: .leading, spacing: Spacing.s) {
-                    ProgressView(value: min(1, Double(bundle.usedBytes) / Double(max(1, bundle.sizeBytes))))
-                        .tint(bundle.measuredRemaining == 0 ? Color.statusCritical : Color.accentColor)
-                    Text("\(Format.bytes(bundle.usedBytes)) used of \(Format.bytes(bundle.sizeBytes))")
-                        .font(.rowTitle)
-                        .monospacedDigit()
-                }
-                .padding(.vertical, Spacing.xs)
-                .accessibilityElement(children: .combine)
+        let active = usage.activeBundles
 
-                LabeledContent("Should be left", value: Format.bytes(bundle.measuredRemaining))
-                if let expires = bundle.expiresAt {
-                    LabeledContent("Expires", value: expires.formatted(date: .abbreviated, time: .shortened))
-                }
-                if let check = bundle.checks.first {
-                    BalanceCheckRow(bundle: bundle, check: check)
-                }
-                Button("Compare With Provider Balance", systemImage: "scalemass") { showBalanceCheck = true }
-                    .accessibilityIdentifier("data.checkBalance")
-                Button("End Bundle", systemImage: "xmark.circle", role: .destructive) { confirmEnd = true }
-            } else {
+        Section {
+            if active.isEmpty {
                 ContentUnavailableView("No Active Bundle",
                                        systemImage: "simcard",
                                        description: Text("Add the bundle you bought to see how much should be left."))
             }
-            Button(usage.activeBundle == nil ? "Add Bundle" : "Add New Bundle", systemImage: "plus") { showAddBundle = true }
+            ForEach(active) { bundle in
+                ActiveBundleRow(bundle: bundle, isNext: bundle.id == active.first?.id && active.count > 1)
+                    .swipeActions {
+                        Button("End", systemImage: "xmark.circle", role: .destructive) { bundleToEnd = bundle }
+                    }
+            }
+            if !active.isEmpty {
+                LabeledContent(active.count > 1 ? "Should be left in total" : "Should be left",
+                               value: Format.bytes(usage.totalRemaining))
+                if let check = usage.latestCheck {
+                    BalanceCheckRow(check: check)
+                }
+                Button("Compare With Provider Balance", systemImage: "scalemass") { showBalanceCheck = true }
+                    .accessibilityIdentifier("data.checkBalance")
+            }
+            Button(active.isEmpty ? "Add Bundle" : "Add Another Bundle", systemImage: "plus") { showAddBundle = true }
                 .accessibilityIdentifier("data.addBundle")
         } header: {
-            Text("Data Bundle")
+            Text(active.count > 1 ? "Data Bundles" : "Data Bundle")
         } footer: {
-            if usage.spentThisMonth > 0 {
-                Text("Spent on bundles this month: \(usage.spentThisMonth.formatted(.currency(code: Format.currencyCode)))")
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                if active.count > 1 {
+                    Text("With more than one bundle, usage comes off the one that expires first. Swipe a bundle to end it.")
+                }
+                if usage.spentThisMonth > 0 {
+                    Text("Spent on bundles this month: \(usage.spentThisMonth.formatted(.currency(code: Format.currencyCode)))")
+                }
             }
         }
     }
 }
 
+private struct ActiveBundleRow: View {
+    let bundle: DataBundle
+    let isNext: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            ProgressView(value: min(1, Double(bundle.usedBytes) / Double(max(1, bundle.sizeBytes))))
+            Text("\(Format.bytes(bundle.usedBytes)) used of \(Format.bytes(bundle.sizeBytes))")
+                .font(.rowTitle)
+                .monospacedDigit()
+            Text(detail)
+                .font(.rowDetail)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, Spacing.xs)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var detail: String {
+        var parts: [String] = []
+        if isNext { parts.append("In use now") }
+        if let expires = bundle.expiresAt {
+            parts.append("Expires \(expires.formatted(date: .abbreviated, time: .shortened))")
+        } else {
+            parts.append("No expiry set")
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
 /// The result of comparing the measured balance with the provider's.
 private struct BalanceCheckRow: View {
-    let bundle: DataBundle
     let check: BalanceCheck
 
     var body: some View {
-        let flagged = bundle.isDiscrepancy(check)
+        let flagged = check.isDiscrepancy
         let amount = Format.bytes(abs(check.difference))
 
         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -167,7 +202,7 @@ private struct BalanceCheckRow: View {
         if check.difference > 0 {
             return numbers + " More was deducted than this iPhone used. Personal Hotspot, another device on the same line, or a restart before NetPulse was opened can explain it. If none apply, raise it with your provider."
         }
-        return numbers + " You may have bonus data, or the bundle was larger than entered."
+        return numbers + " You may have bonus data, or a bundle that isn't entered here."
     }
 }
 
@@ -272,7 +307,7 @@ private struct AddBundleSheet: View {
                 } header: {
                     Text("Optional")
                 } footer: {
-                    Text("Add the bundle right after you buy it. NetPulse counts mobile data from this moment, and stops tracking any earlier bundle.")
+                    Text("Add the bundle right after you buy it. NetPulse counts mobile data from this moment. If you already have a bundle running, both are tracked and the one that expires first is used up first.")
                 }
             }
             .navigationTitle("Add Bundle")
@@ -311,7 +346,7 @@ private struct BalanceCheckSheet: View {
                 } header: {
                     Text("Provider Balance")
                 } footer: {
-                    Text("Check your balance with your provider, then enter what it says is left. NetPulse compares it with what this iPhone used.")
+                    Text("Check your balance with your provider, then enter the total it says is left across all your bundles. NetPulse compares it with what this iPhone used.")
                 }
             }
             .navigationTitle("Compare Balance")

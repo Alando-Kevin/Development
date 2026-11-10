@@ -64,9 +64,16 @@ struct BalanceCheck: Codable, Identifiable {
     let date: Date
     let reportedRemaining: Int64
     let measuredRemaining: Int64
+    /// Combined size of the bundles that were active when the check was made.
+    let totalSize: Int64
 
     /// Positive when the provider has deducted more than this iPhone measured.
     var difference: Int64 { measuredRemaining - reportedRemaining }
+
+    /// Differences smaller than this are treated as a match.
+    var tolerance: Int64 { max(50_000_000, totalSize / 20) }
+
+    var isDiscrepancy: Bool { abs(difference) > tolerance }
 }
 
 /// A data bundle the user bought.
@@ -77,7 +84,6 @@ struct DataBundle: Codable, Identifiable {
     var validDays: Int? = nil
     var cost: Double? = nil
     var usedBytes: Int64 = 0
-    var checks: [BalanceCheck] = []
     var endedAt: Date? = nil
 
     var expiresAt: Date? {
@@ -87,15 +93,10 @@ struct DataBundle: Codable, Identifiable {
     var isActive: Bool {
         if endedAt != nil { return false }
         if let expiresAt, expiresAt < Date() { return false }
-        return true
+        return usedBytes < sizeBytes
     }
 
     var measuredRemaining: Int64 { max(0, sizeBytes - usedBytes) }
-
-    /// Differences smaller than this are treated as a match.
-    var tolerance: Int64 { max(50_000_000, sizeBytes / 20) }
-
-    func isDiscrepancy(_ check: BalanceCheck) -> Bool { abs(check.difference) > tolerance }
 }
 
 struct UsageState: Codable {
@@ -106,6 +107,8 @@ struct UsageState: Codable {
     var switches: [SwitchEvent] = []
     var lastConnected: NetworkKind? = nil
     var mobileSinceSwitch: Int64 = 0
+    /// Comparisons with the provider's balance, newest first.
+    var checks: [BalanceCheck]? = nil
 }
 
 /// Tracks how much mobile data and Wi-Fi data the phone uses, data bundles, and network changes.
@@ -146,7 +149,21 @@ final class DataUsageTracker: ObservableObject {
         }
     }
 
-    var activeBundle: DataBundle? { state.bundles.first { $0.isActive } }
+    /// Bundles still running, in the order they are used up: soonest expiry first.
+    var activeBundles: [DataBundle] {
+        state.bundles.filter(\.isActive).sorted(by: Self.usedBefore)
+    }
+
+    /// What should be left across every active bundle.
+    var totalRemaining: Int64 { activeBundles.reduce(0) { $0 + $1.measuredRemaining } }
+
+    var latestCheck: BalanceCheck? { state.checks?.first }
+
+    private static func usedBefore(_ a: DataBundle, _ b: DataBundle) -> Bool {
+        let aExpiry = a.expiresAt ?? .distantFuture
+        let bExpiry = b.expiresAt ?? .distantFuture
+        return aExpiry == bExpiry ? a.purchasedAt < b.purchasedAt : aExpiry < bExpiry
+    }
 
     var pastBundles: [DataBundle] { state.bundles.filter { !$0.isActive } }
 
@@ -220,8 +237,13 @@ final class DataUsageTracker: ObservableObject {
             if state.days.count > Self.daysKept { state.days.removeFirst(state.days.count - Self.daysKept) }
         }
         state.mobileSinceSwitch += mobile
-        if mobile > 0, let index = state.bundles.firstIndex(where: { $0.isActive }) {
-            state.bundles[index].usedBytes += mobile
+        // With stacked bundles, take usage from the one that expires first and spill into the next.
+        var left = mobile
+        for bundle in activeBundles where left > 0 {
+            guard let index = state.bundles.firstIndex(where: { $0.id == bundle.id }) else { continue }
+            let taken = min(left, bundle.measuredRemaining)
+            state.bundles[index].usedBytes += taken
+            left -= taken
         }
 
         unsaved += 1
@@ -249,13 +271,12 @@ final class DataUsageTracker: ObservableObject {
 
     func addBundle(sizeBytes: Int64, validDays: Int?, cost: Double?) {
         sample()
-        endActiveBundle()
         state.bundles.insert(DataBundle(purchasedAt: Date(), sizeBytes: sizeBytes, validDays: validDays, cost: cost), at: 0)
         save()
     }
 
-    func endActiveBundle() {
-        guard let index = state.bundles.firstIndex(where: { $0.isActive }) else { return }
+    func endBundle(id: UUID) {
+        guard let index = state.bundles.firstIndex(where: { $0.id == id }) else { return }
         state.bundles[index].endedAt = Date()
         save()
     }
@@ -263,11 +284,15 @@ final class DataUsageTracker: ObservableObject {
     /// Compares the measured balance with what the provider says is left.
     func recordBalance(reportedRemaining: Int64) {
         sample()
-        guard let index = state.bundles.firstIndex(where: { $0.isActive }) else { return }
-        let bundle = state.bundles[index]
-        state.bundles[index].checks.insert(BalanceCheck(date: Date(),
-                                                        reportedRemaining: reportedRemaining,
-                                                        measuredRemaining: bundle.measuredRemaining), at: 0)
+        let active = activeBundles
+        guard !active.isEmpty else { return }
+        var checks = state.checks ?? []
+        checks.insert(BalanceCheck(date: Date(),
+                                   reportedRemaining: reportedRemaining,
+                                   measuredRemaining: totalRemaining,
+                                   totalSize: active.reduce(0) { $0 + $1.sizeBytes }), at: 0)
+        if checks.count > 50 { checks.removeLast(checks.count - 50) }
+        state.checks = checks
         save()
     }
 

@@ -7,7 +7,7 @@ NetPulse tracks your iPhone's internet connection:
 - **Live** – a 0–100 connection strength score with signal bars, the connection type (Wi-Fi, 5G, LTE), the Wi-Fi name, the service provider, response time, jitter and failed checks.
 - **Speed** – an on-demand speed test (download, upload, ping, jitter) with history.
 - **Consistency** – a response-time timeline over 5 minutes to 24 hours with every drop marked in red, plus uptime and a drop log.
-- **Data** – mobile data and Wi-Fi used by day, a data bundle tracker that compares what the phone measured with the balance your provider reports and flags differences, and a log of moves between Wi-Fi and mobile data.
+- **Data** – mobile data and Wi-Fi used by day, a data bundle tracker (stacked bundles supported, soonest expiry used first) that compares what the phone measured with the balance your provider reports and flags differences, and a log of moves between Wi-Fi and mobile data.
 
 ### Run it on your iPhone
 
