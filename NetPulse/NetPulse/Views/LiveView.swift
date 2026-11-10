@@ -39,23 +39,10 @@ struct LiveView: View {
                     LabeledContent("Type", value: monitor.networkLabel)
                     if monitor.network == .wifi {
                         LabeledContent("Wi-Fi Name", value: monitor.wifiName ?? "Not available")
-                        VStack(alignment: .leading, spacing: Spacing.s) {
-                            Text("Band (GHz)")
-                            Picker("Band", selection: $monitor.wifiBand) {
-                                ForEach(WifiBand.allCases) { Text($0.shortLabel).tag($0) }
-                            }
-                            .pickerStyle(.segmented)
-                            .accessibilityIdentifier("live.bandPicker")
-                        }
-                        .padding(.vertical, Spacing.xs)
                     }
                     LabeledContent("Provider", value: monitor.provider ?? (monitor.network == .offline ? "–" : "Looking up…"))
                 } header: {
                     Text("Connection")
-                } footer: {
-                    if monitor.network == .wifi {
-                        Text("Tap the band this network uses. NetPulse remembers it and labels your results with it. iOS doesn't let apps detect the band or move the iPhone to another one.")
-                    }
                 }
 
                 Section("Last Minute") {

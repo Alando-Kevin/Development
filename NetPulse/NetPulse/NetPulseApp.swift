@@ -4,7 +4,7 @@ import SwiftUI
 struct NetPulseApp: App {
     @StateObject private var monitor = ConnectionMonitor()
     @StateObject private var speedTest = SpeedTestEngine()
-    @StateObject private var usage = DataUsageTracker()
+    @StateObject private var usage = DataUsageTracker.shared
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("monitoringEnabled") private var monitoringEnabled = true
     @AppStorage("keepAwake") private var keepAwake = false

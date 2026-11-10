@@ -148,8 +148,6 @@ svg.chart { display: block; width: 100%; height: auto; }
       <div class="card" style="gap:0">
         <div class="log" style="border-top:0;padding-top:0"><span class="sub">Type</span><b id="d-net">Wi-Fi</b></div>
         <div class="log" id="d-wifi-row"><span class="sub">Wi-Fi Name</span><b id="d-wifi">Kev</b></div>
-        <div class="log" id="d-band-row" style="flex-direction:column;align-items:stretch;gap:6px"><span class="sub">Band (GHz)</span>
-          <div class="seg" id="band"><button data-b="" aria-pressed="false">Not set</button><button data-b="2.4 GHz" aria-pressed="true">2.4</button><button data-b="5 GHz" aria-pressed="false">5</button><button data-b="6 GHz" aria-pressed="false">6</button></div></div>
         <div class="log"><span class="sub">Provider</span><b id="d-isp">Safaricom Business</b></div>
       </div>
       <p class="sec">Last Minute</p>
@@ -240,6 +238,14 @@ svg.chart { display: block; width: 100%; height: auto; }
           <input id="b-input" type="number" inputmode="decimal" min="0" value="4650" style="width:90px;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg)"></div>
         <button class="primary" id="b-check">Compare With Provider Balance</button>
       </div>
+      <p class="sec">Add From Safaricom Message</p>
+      <div class="card">
+        <label class="sub" for="m-text">Paste a message</label>
+        <textarea id="m-text" rows="3" style="font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg);resize:vertical">You have bought 1GB Data bundle valid for 24 hours at Ksh 99.00.</textarea>
+        <button class="primary" id="m-read">Read Message</button>
+        <p class="sub" id="m-out" hidden></p>
+      </div>
+      <p class="note">The message above is an invented example. Try a balance message too, such as "Your data balance is 4650 MB".</p>
       <p class="sec">Network Changes</p>
       <div class="card" style="gap:0" id="sw-log"></div>
       <p class="note">Figures cover everything the iPhone used, including while NetPulse was closed. With more than one bundle, usage comes off the one that expires first. Use the Switch button beside the phone to see a change logged here.</p>
@@ -259,7 +265,7 @@ svg.chart { display: block; width: 100%; height: auto; }
   var $ = function (id) { return document.getElementById(id); };
   var INTERVAL = 2, GAP = 12;
   var net = 'Wi-Fi', dropLeft = 0, slowLeft = 0, samples = [], tab = 'live', windowSec = 3600;
-  var tests = [], band = '2.4 GHz', MB = 1e6, mobToday = 212 * MB, mob7 = 1460 * MB, mob30 = 5230 * MB, sinceSwitch = 0;
+  var tests = [], MB = 1e6, mobToday = 212 * MB, mob7 = 1460 * MB, mob30 = 5230 * MB, sinceSwitch = 0;
   var bundles = [{ size: 2000 * MB, used: 1840 * MB, exp: 'Expires in 2 days' }, { size: 5000 * MB, used: 0, exp: 'Expires in 27 days' }], check = null, switches = [];
   function totalLeft() { return bundles.reduce(function (a, b) { return a + Math.max(0, b.size - b.used); }, 0); }
   function totalSize() { return bundles.reduce(function (a, b) { return a + b.size; }, 0); }
@@ -281,14 +287,14 @@ svg.chart { display: block; width: 100%; height: auto; }
     }
     var day = 86400000;
     tests = [
-      { t: now - 0.2 * day, down: 41.8, up: 14.2, ping: 9, jit: 3, net: 'Wi-Fi', band: '2.4 GHz' },
+      { t: now - 0.2 * day, down: 41.8, up: 14.2, ping: 9, jit: 3, net: 'Wi-Fi' },
       { t: now - 1.1 * day, down: 96.7, up: 21.2, ping: 33, jit: 6, net: '5G' },
-      { t: now - 2.3 * day, down: 38.3, up: 12.6, ping: 11, jit: 4, net: 'Wi-Fi', band: '2.4 GHz' }
+      { t: now - 2.3 * day, down: 38.3, up: 12.6, ping: 11, jit: 4, net: 'Wi-Fi' }
     ];
   })();
 
   function isp() { return net === 'Wi-Fi' ? 'Safaricom Business' : 'Safaricom'; }
-  function conn(r) { return r.net === 'Wi-Fi' ? ['Wi-Fi', 'Kev', r.band, 'Safaricom Business'].filter(Boolean).join(' · ') : r.net + ' · Safaricom'; }
+  function conn(r) { return r.net === 'Wi-Fi' ? 'Wi-Fi · Kev · Safaricom Business' : r.net + ' · Safaricom'; }
   function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
   function jitter(a) { if (a.length < 2) return null; var t = 0; for (var i = 1; i < a.length; i++) t += Math.abs(a[i] - a[i - 1]); return t / (a.length - 1); }
   function inLast(sec) { var c = Date.now() - sec * 1000, i = samples.length; while (i > 0 && samples[i - 1].t > c) i--; return samples.slice(i); }
@@ -380,7 +386,7 @@ svg.chart { display: block; width: 100%; height: auto; }
       drawGlyph(q);
       $('level').innerHTML = levelIcon(q) + q.level; $('level').className = 'level ' + q.cls;
       $('score').textContent = q.score == null ? '' : 'Strength ' + q.score + ' out of 100';
-      $('d-net').textContent = net; $('d-wifi-row').hidden = $('d-band-row').hidden = net !== 'Wi-Fi'; $('d-isp').textContent = isp();
+      $('d-net').textContent = net; $('d-wifi-row').hidden = net !== 'Wi-Fi'; $('d-isp').textContent = isp();
       $('s-lat').textContent = fms(q.med); $('s-jit').textContent = fms(q.jit);
       $('s-loss').textContent = q.loss == null ? '–' : Math.round(q.loss) + '%'; $('s-loss').className = q.loss > 0 ? 'bad' : '';
       drawChart($('chart-live'), inLast(120), 120, 150);
@@ -463,7 +469,7 @@ svg.chart { display: block; width: 100%; height: auto; }
       if (t <= 10) { $('sp-phase').textContent = 'Checking ping…'; $('sp-num').textContent = '–'; }
       else if (t <= 40) { $('sp-phase').textContent = 'Testing download'; $('sp-num').textContent = fmbps(goal.down * Math.min(1, (t - 10) / 8) * (0.93 + Math.random() * 0.14)); }
       else if (t < total) { $('sp-phase').textContent = 'Testing upload'; $('sp-partial').textContent = 'Download ' + fmbps(goal.down) + ' Mbps'; $('sp-num').textContent = fmbps(goal.up * Math.min(1, (t - 40) / 8) * (0.93 + Math.random() * 0.14)); }
-      else { clearInterval(running); running = null; tests.unshift({ t: Date.now(), down: goal.down, up: goal.up, ping: goal.ping, jit: goal.jit, net: net, band: band }); resetSpeed(); renderTests(); }
+      else { clearInterval(running); running = null; tests.unshift({ t: Date.now(), down: goal.down, up: goal.up, ping: goal.ping, jit: goal.jit, net: net }); resetSpeed(); renderTests(); }
     }, 100);
   }
   function resetSpeed() {
@@ -504,11 +510,30 @@ svg.chart { display: block; width: 100%; height: auto; }
     check = { reported: v * MB, measured: totalLeft() };
     render();
   });
-  document.querySelectorAll('#band button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      band = b.dataset.b;
-      document.querySelectorAll('#band button').forEach(function (o) { o.setAttribute('aria-pressed', o === b); });
-    });
+  // Same rules as MessageParser.swift.
+  function parseMessage(text) {
+    var t = text.toLowerCase(), amounts = [], m, re = /(\d[\d,]*(?:\.\d+)?)\s*(gb|mb|kb)\b/g;
+    while ((m = re.exec(t))) amounts.push(parseFloat(m[1].replace(/,/g, '')) * (m[2] === 'gb' ? 1e9 : m[2] === 'mb' ? 1e6 : 1e3));
+    if (!amounts.length) return null;
+    if (['bought', 'purchased', 'purchase of', 'successfully', 'you have received', 'activated'].some(function (w) { return t.indexOf(w) >= 0; })) {
+      var c = /(?:kshs?|kes)\.?\s*(\d[\d,]*(?:\.\d+)?)/.exec(t), v = /(\d+)\s*(hours?|hrs?|days?|weeks?)\b/.exec(t);
+      return { kind: 'purchase', size: amounts[0], cost: c ? c[1] : null, valid: v ? v[1] + ' ' + v[2] : null };
+    }
+    if (['balance', 'remaining', 'bal:', 'bal '].some(function (w) { return t.indexOf(w) >= 0; })) return { kind: 'balance', left: amounts.reduce(function (a, b) { return a + b; }, 0) };
+    return null;
+  }
+  $('m-read').addEventListener('click', function () {
+    var r = parseMessage($('m-text').value), out = $('m-out');
+    out.hidden = false;
+    if (!r) { out.textContent = 'No bundle purchase or data balance found in this message.'; return; }
+    if (r.kind === 'purchase') {
+      bundles.push({ size: r.size, used: 0, exp: r.valid ? 'Expires in ' + r.valid : 'No expiry set' });
+      out.textContent = 'Added a ' + fbytes(r.size) + ' bundle' + (r.cost ? ' costing KSh ' + r.cost : '') + '.';
+    } else {
+      check = { reported: r.left, measured: totalLeft() };
+      out.textContent = 'Compared provider balance of ' + fbytes(r.left) + ' with the measured balance.';
+    }
+    render();
   });
   (function () { var n = Date.now(); switches = [{ t: n - 3 * 3600e3, to: 'Wi-Fi', used: 96 * MB }, { t: n - 4.2 * 3600e3, to: '5G', used: 0 }]; })();
 

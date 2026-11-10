@@ -85,9 +85,11 @@ struct DataBundle: Codable, Identifiable {
     var cost: Double? = nil
     var usedBytes: Int64 = 0
     var endedAt: Date? = nil
+    /// Exact expiry, when it was read from a provider message.
+    var explicitExpiry: Date? = nil
 
     var expiresAt: Date? {
-        validDays.map { purchasedAt.addingTimeInterval(TimeInterval($0) * 86400) }
+        explicitExpiry ?? validDays.map { purchasedAt.addingTimeInterval(TimeInterval($0) * 86400) }
     }
 
     var isActive: Bool {
@@ -97,6 +99,13 @@ struct DataBundle: Codable, Identifiable {
     }
 
     var measuredRemaining: Int64 { max(0, sizeBytes - usedBytes) }
+}
+
+/// A provider message that was handed to NetPulse, and what was done with it.
+struct LoggedMessage: Codable, Identifiable {
+    var id = UUID()
+    let date: Date
+    let outcome: String
 }
 
 struct UsageState: Codable {
@@ -109,11 +118,15 @@ struct UsageState: Codable {
     var mobileSinceSwitch: Int64 = 0
     /// Comparisons with the provider's balance, newest first.
     var checks: [BalanceCheck]? = nil
+    var messages: [LoggedMessage]? = nil
 }
 
 /// Tracks how much mobile data and Wi-Fi data the phone uses, data bundles, and network changes.
 @MainActor
 final class DataUsageTracker: ObservableObject {
+    /// One shared tracker, so the Shortcuts action and the app's screens use the same data.
+    static let shared = DataUsageTracker()
+
     static let file = "usage.json"
     static let sampleInterval: TimeInterval = 5
     static let daysKept = 90
@@ -269,9 +282,10 @@ final class DataUsageTracker: ObservableObject {
 
     // MARK: Bundles
 
-    func addBundle(sizeBytes: Int64, validDays: Int?, cost: Double?) {
+    func addBundle(sizeBytes: Int64, validDays: Int?, cost: Double?, expires: Date? = nil) {
         sample()
-        state.bundles.insert(DataBundle(purchasedAt: Date(), sizeBytes: sizeBytes, validDays: validDays, cost: cost), at: 0)
+        state.bundles.insert(DataBundle(purchasedAt: Date(), sizeBytes: sizeBytes, validDays: validDays,
+                                        cost: cost, explicitExpiry: expires), at: 0)
         save()
     }
 
@@ -294,6 +308,36 @@ final class DataUsageTracker: ObservableObject {
         if checks.count > 50 { checks.removeLast(checks.count - 50) }
         state.checks = checks
         save()
+    }
+
+    /// Reads a provider message and records the bundle or balance in it. Returns a sentence saying what happened.
+    @discardableResult
+    func apply(message: String) -> String {
+        let outcome: String
+        switch MessageParser.parse(message) {
+        case .purchase(let size, let cost, let expires):
+            addBundle(sizeBytes: size, validDays: nil, cost: cost, expires: expires)
+            outcome = "Added a \(Format.bytes(size)) bundle."
+        case .balance(let remaining):
+            if activeBundles.isEmpty {
+                outcome = "Balance of \(Format.bytes(remaining)) noted, but there is no active bundle to compare it with."
+            } else {
+                recordBalance(reportedRemaining: remaining)
+                if let check = latestCheck, check.isDiscrepancy {
+                    outcome = "Provider balance \(Format.bytes(remaining)) differs from the measured balance by \(Format.bytes(abs(check.difference)))."
+                } else {
+                    outcome = "Provider balance \(Format.bytes(remaining)) matches the measured balance."
+                }
+            }
+        case .unrecognised:
+            outcome = "No bundle purchase or data balance found in that message."
+        }
+        var messages = state.messages ?? []
+        messages.insert(LoggedMessage(date: Date(), outcome: outcome), at: 0)
+        if messages.count > 30 { messages.removeLast(messages.count - 30) }
+        state.messages = messages
+        save()
+        return outcome
     }
 
     func removeBundles(ids: Set<UUID>) {

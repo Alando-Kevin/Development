@@ -29,8 +29,7 @@ struct SpeedTestView: View {
                         } else {
                             Button {
                                 speedTest.run(network: monitor.network, radio: monitor.radio,
-                                              wifiName: monitor.wifiName, provider: monitor.provider,
-                                              band: monitor.network == .wifi && monitor.wifiBand != .notSet ? monitor.wifiBand.rawValue : nil)
+                                              wifiName: monitor.wifiName, provider: monitor.provider)
                             } label: {
                                 Text("Run Speed Test").frame(maxWidth: .infinity)
                             }

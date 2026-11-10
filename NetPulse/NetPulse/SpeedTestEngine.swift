@@ -94,7 +94,7 @@ final class SpeedTestEngine: ObservableObject {
         results = Store.load([SpeedTestResult].self, from: Store.speedTestsFile) ?? []
     }
 
-    func run(network: NetworkKind, radio: String?, wifiName: String?, provider: String?, band: String?) {
+    func run(network: NetworkKind, radio: String?, wifiName: String?, provider: String?) {
         guard !phase.isRunning else { return }
         partialDownload = nil
         partialPing = nil
@@ -115,7 +115,7 @@ final class SpeedTestEngine: ObservableObject {
 
                 let result = SpeedTestResult(date: Date(), downloadMbps: down, uploadMbps: up,
                                              pingMs: ping, jitterMs: jitter, network: network, radio: radio,
-                                             wifiName: wifiName, provider: provider, band: band)
+                                             wifiName: wifiName, provider: provider)
                 results.insert(result, at: 0)
                 if results.count > 200 { results.removeLast(results.count - 200) }
                 Store.save(results, to: Store.speedTestsFile)

@@ -25,26 +25,6 @@ enum NetworkKind: String, Codable {
     }
 }
 
-/// The Wi-Fi frequency band. The user picks it, because iOS doesn't tell apps which band is in use.
-enum WifiBand: String, CaseIterable, Identifiable {
-    case notSet = "Not set"
-    case band24 = "2.4 GHz"
-    case band5 = "5 GHz"
-    case band6 = "6 GHz"
-
-    var id: String { rawValue }
-
-    /// Short text for the band buttons.
-    var shortLabel: String {
-        switch self {
-        case .notSet: return "Not set"
-        case .band24: return "2.4"
-        case .band5: return "5"
-        case .band6: return "6"
-        }
-    }
-}
-
 /// One connectivity check. `latencyMs` is nil when the check failed (no response in time).
 struct ProbeSample: Codable, Identifiable {
     let time: Date
@@ -78,16 +58,15 @@ struct SpeedTestResult: Codable, Identifiable {
     let radio: String?
     var wifiName: String? = nil
     var provider: String? = nil
-    var band: String? = nil
 
     var networkLabel: String {
         if network == .cellular, let radio { return radio }
         return network.label
     }
 
-    /// e.g. "Wi-Fi · Kev · 2.4 GHz · Safaricom Business"
+    /// e.g. "Wi-Fi · Kev · Safaricom Business"
     var connectionSummary: String {
-        [networkLabel, wifiName, band, provider].compactMap { $0 }.joined(separator: " · ")
+        [networkLabel, wifiName, provider].compactMap { $0 }.joined(separator: " · ")
     }
 }
 

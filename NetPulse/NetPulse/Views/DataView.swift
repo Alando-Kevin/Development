@@ -5,6 +5,7 @@ struct DataView: View {
     @EnvironmentObject private var usage: DataUsageTracker
     @State private var showAddBundle = false
     @State private var showBalanceCheck = false
+    @State private var showMessage = false
     @State private var bundleToEnd: DataBundle?
     @ScaledMetric private var chartHeight = ChartSize.compact
 
@@ -84,6 +85,9 @@ struct DataView: View {
             .sheet(isPresented: $showBalanceCheck) {
                 BalanceCheckSheet()
             }
+            .sheet(isPresented: $showMessage) {
+                MessageSheet()
+            }
             .confirmationDialog("Stop tracking this bundle?",
                                 isPresented: Binding(get: { bundleToEnd != nil }, set: { if !$0 { bundleToEnd = nil } }),
                                 titleVisibility: .visible) {
@@ -122,6 +126,18 @@ struct DataView: View {
             }
             Button(active.isEmpty ? "Add Bundle" : "Add Another Bundle", systemImage: "plus") { showAddBundle = true }
                 .accessibilityIdentifier("data.addBundle")
+            Button("Add From Safaricom Message", systemImage: "message") { showMessage = true }
+                .accessibilityIdentifier("data.addFromMessage")
+            if let last = usage.state.messages?.first {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(last.outcome)
+                        .font(.rowTitle)
+                    Text("Last message, \(last.date.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.rowDetail)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+            }
         } header: {
             Text(active.count > 1 ? "Data Bundles" : "Data Bundle")
         } footer: {
