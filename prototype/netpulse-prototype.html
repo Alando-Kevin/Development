@@ -108,7 +108,7 @@ svg.chart { display: block; width: 100%; height: auto; }
 .chart .dropline { stroke: var(--bad); stroke-width: 1.5; }
 
 .tabs { display: flex; border-top: 1px solid var(--line); background: var(--card); padding: 6px 8px 14px; }
-.tabs button { flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 500; color: var(--muted); padding: 4px 0; border-radius: 8px; }
+.tabs button { flex: 1; min-width: 0; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 500; color: var(--muted); padding: 4px 0; border-radius: 8px; }
 .tabs button[aria-selected="true"] { color: var(--accent); }
 .tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -122,12 +122,12 @@ svg.chart { display: block; width: 100%; height: auto; }
   <div class="side">
     <span class="tag">Simulated data</span>
     <h1>NetPulse, the iPhone app, as a clickable prototype</h1>
-    <p>The three screens here match the SwiftUI app in the repo. The numbers are generated in your browser so you can see how the app reacts. On your iPhone they come from real measurements.</p>
+    <p>The four screens here match the SwiftUI app in the repo. The numbers are generated in your browser so you can see how the app reacts. On your iPhone they come from real measurements.</p>
     <div class="controls">
       <h2>Try it</h2>
       <button class="ctl" id="ctl-drop"><b>Cut the connection for 10 seconds</b><span>Watch the bars empty, the chart turn red, and the drop land in the log.</span></button>
       <button class="ctl" id="ctl-slow"><b>Make it slow for 20 seconds</b><span>Response times climb and strength falls without a full drop.</span></button>
-      <button class="ctl" id="ctl-net"><b>Switch to 5G</b><span>Changes the connection type the app reports.</span></button>
+      <button class="ctl" id="ctl-net"><b>Switch to 5G</b><span>The change is logged on the Data tab, and mobile data starts counting.</span></button>
     </div>
     <p id="ctl-status" role="status">Monitoring a healthy Wi-Fi connection. One check every 2 seconds.</p>
   </div>
@@ -148,7 +148,8 @@ svg.chart { display: block; width: 100%; height: auto; }
       <div class="card" style="gap:0">
         <div class="log" style="border-top:0;padding-top:0"><span class="sub">Type</span><b id="d-net">Wi-Fi</b></div>
         <div class="log" id="d-wifi-row"><span class="sub">Wi-Fi Name</span><b id="d-wifi">Kev</b></div>
-        <div class="log" id="d-band-row"><span class="sub">Band</span><b>2.4 GHz</b></div>
+        <div class="log" id="d-band-row" style="flex-direction:column;align-items:stretch;gap:6px"><span class="sub">Band (GHz)</span>
+          <div class="seg" id="band"><button data-b="" aria-pressed="false">Not set</button><button data-b="2.4 GHz" aria-pressed="true">2.4</button><button data-b="5 GHz" aria-pressed="false">5</button><button data-b="6 GHz" aria-pressed="false">6</button></div></div>
         <div class="log"><span class="sub">Provider</span><b id="d-isp">Safaricom Business</b></div>
       </div>
       <p class="sec">Last Minute</p>
@@ -222,10 +223,34 @@ svg.chart { display: block; width: 100%; height: auto; }
       <p class="note">The app keeps 24 hours of history, with 6 hr and 24 hr views. This preview holds one simulated hour.</p>
     </div>
 
+    <div class="screen" id="tab-data" hidden>
+      <h2>Data</h2>
+      <p class="sec">Mobile Data Used</p>
+      <div class="card"><div class="row">
+        <div class="stat"><small>Today</small><b id="u-today"></b></div>
+        <div class="stat"><small>7 days</small><b id="u-7"></b></div>
+        <div class="stat"><small>30 days</small><b id="u-30"></b></div>
+      </div></div>
+      <p class="sec">Data Bundle</p>
+      <div class="card">
+        <div class="bar" style="height:6px;border-radius:3px"><i id="b-bar"></i></div>
+        <p class="sub" id="b-used" style="color:var(--fg)"></p>
+        <div class="log"><span class="sub">Should be left</span><b id="b-left"></b></div>
+        <div id="b-result" hidden></div>
+        <div class="log" style="gap:8px"><label class="sub" for="b-input">Provider says left (MB)</label>
+          <input id="b-input" type="number" inputmode="decimal" min="0" value="2850" style="width:90px;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg)"></div>
+        <button class="primary" id="b-check">Compare With Provider Balance</button>
+      </div>
+      <p class="sec">Network Changes</p>
+      <div class="card" style="gap:0" id="sw-log"></div>
+      <p class="note">Figures cover everything the iPhone used, including while NetPulse was closed. iOS doesn't show apps which app used the data. Use the Switch button beside the phone to see a change logged here.</p>
+    </div>
+
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="live" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M2 12h4l3-7 4 14 3-7h6"/></svg>Live</button>
       <button role="tab" data-tab="speed" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-6"/></svg>Speed</button>
       <button role="tab" data-tab="cons" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7 14l3-4 3 2 2-5 4 3"/></svg>Consistency</button>
+      <button role="tab" data-tab="data" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M5 20v-6M12 20V5M19 20v-9"/></svg>Data</button>
     </div>
   </div>
 </div>
@@ -235,7 +260,8 @@ svg.chart { display: block; width: 100%; height: auto; }
   var $ = function (id) { return document.getElementById(id); };
   var INTERVAL = 2, GAP = 12;
   var net = 'Wi-Fi', dropLeft = 0, slowLeft = 0, samples = [], tab = 'live', windowSec = 3600;
-  var tests = [];
+  var tests = [], band = '2.4 GHz', MB = 1e6, mobToday = 212 * MB, mob7 = 1460 * MB, mob30 = 5230 * MB, sinceSwitch = 0;
+  var bundle = { size: 5000 * MB, used: 1840 * MB, check: null }, switches = [];
 
   function latencyFor(n, slow) {
     var base = n === 'Wi-Fi' ? 22 : 38;
@@ -254,14 +280,14 @@ svg.chart { display: block; width: 100%; height: auto; }
     }
     var day = 86400000;
     tests = [
-      { t: now - 0.2 * day, down: 41.8, up: 14.2, ping: 9, jit: 3, net: 'Wi-Fi' },
+      { t: now - 0.2 * day, down: 41.8, up: 14.2, ping: 9, jit: 3, net: 'Wi-Fi', band: '2.4 GHz' },
       { t: now - 1.1 * day, down: 96.7, up: 21.2, ping: 33, jit: 6, net: '5G' },
-      { t: now - 2.3 * day, down: 38.3, up: 12.6, ping: 11, jit: 4, net: 'Wi-Fi' }
+      { t: now - 2.3 * day, down: 38.3, up: 12.6, ping: 11, jit: 4, net: 'Wi-Fi', band: '2.4 GHz' }
     ];
   })();
 
   function isp() { return net === 'Wi-Fi' ? 'Safaricom Business' : 'Safaricom'; }
-  function conn(r) { return r.net === 'Wi-Fi' ? 'Wi-Fi · Kev · 2.4 GHz · Safaricom Business' : r.net + ' · Safaricom'; }
+  function conn(r) { return r.net === 'Wi-Fi' ? ['Wi-Fi', 'Kev', r.band, 'Safaricom Business'].filter(Boolean).join(' · ') : r.net + ' · Safaricom'; }
   function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
   function jitter(a) { if (a.length < 2) return null; var t = 0; for (var i = 1; i < a.length; i++) t += Math.abs(a[i] - a[i - 1]); return t / (a.length - 1); }
   function inLast(sec) { var c = Date.now() - sec * 1000, i = samples.length; while (i > 0 && samples[i - 1].t > c) i--; return samples.slice(i); }
@@ -291,6 +317,7 @@ svg.chart { display: block; width: 100%; height: auto; }
   }
 
   function dur(ms) { var s = Math.max(1, Math.round(ms / 1000)); return s < 60 ? s + 's' : s < 3600 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm'; }
+  function fbytes(b) { return b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : Math.round(b / 1e6) + ' MB'; }
   function fms(v) { return v == null ? '–' : Math.round(v) + ' ms'; }
   function fmbps(v) { return v >= 100 ? v.toFixed(0) : v.toFixed(1); }
   function clock(t, secs) { return new Date(t).toLocaleTimeString([], secs ? { hour: 'numeric', minute: '2-digit', second: '2-digit' } : { hour: 'numeric', minute: '2-digit' }); }
@@ -360,6 +387,23 @@ svg.chart { display: block; width: 100%; height: auto; }
       if (d && d.ongoing) { ld.textContent = 'Connection down for ' + dur(d.end - d.start); ld.className = 'sub bad'; }
       else { ld.textContent = d ? 'Last drop ' + clock(d.end) + ', lasted ' + dur(d.end - d.start) : 'No drops in the last hour'; ld.className = 'sub'; }
     }
+    if (tab === 'data') {
+      $('u-today').textContent = fbytes(mobToday); $('u-7').textContent = fbytes(mob7); $('u-30').textContent = fbytes(mob30);
+      var left = Math.max(0, bundle.size - bundle.used);
+      $('b-bar').style.width = Math.min(100, bundle.used / bundle.size * 100) + '%';
+      $('b-used').textContent = fbytes(bundle.used) + ' used of ' + fbytes(bundle.size);
+      $('b-left').textContent = fbytes(left);
+      var c = bundle.check, r = $('b-result'); r.hidden = !c;
+      if (c) {
+        var diff = c.measured - c.reported, flagged = Math.abs(diff) > Math.max(50 * MB, bundle.size / 20);
+        var head = !flagged ? ['good', 'Provider balance matches'] : diff > 0 ? ['bad', 'Provider shows ' + fbytes(diff) + ' less than expected'] : ['warn', 'Provider shows ' + fbytes(-diff) + ' more than expected'];
+        var why = !flagged ? '' : diff > 0 ? ' More was deducted than this iPhone used. Personal Hotspot, another device on the same line, or a restart before NetPulse was opened can explain it. If none apply, raise it with your provider.' : ' You may have bonus data, or the bundle was larger than entered.';
+        r.innerHTML = '<div class="log" style="display:block"><b class="' + head[0] + '">' + head[1] + '</b><small>Provider: ' + fbytes(c.reported) + ' left. Measured: ' + fbytes(c.measured) + ' left.' + why + '</small></div>';
+      }
+      $('sw-log').innerHTML = switches.length ? switches.map(function (e, i) {
+        return '<div class="log"' + (i ? '' : ' style="border-top:0;padding-top:0"') + '><div>Switched to ' + (e.to === 'Wi-Fi' ? 'Wi-Fi' : 'mobile data') + '<small>' + clock(e.t) + (e.to === 'Wi-Fi' ? ' · used ' + fbytes(e.used) + ' on mobile data' : '') + '</small></div></div>';
+      }).join('') : '<p class="sub">No changes yet.</p>';
+    }
     if (tab === 'cons') {
       var list = inLast(windowSec), lat = list.filter(function (s) { return s.ms != null; }).map(function (s) { return s.ms; }), ds = drops(list);
       var up = list.length ? lat.length / list.length * 100 : null;
@@ -393,6 +437,7 @@ svg.chart { display: block; width: 100%; height: auto; }
     var failed = dropLeft > 0, slow = slowLeft > 0;
     samples.push({ t: Date.now(), ms: failed ? null : latencyFor(net, slow), net: net });
     if (samples.length > 2000) samples.shift();
+    if (net === '5G' && !failed) { var u = (0.4 + Math.random() * 1.6) * MB; mobToday += u; mob7 += u; mob30 += u; sinceSwitch += u; bundle.used += u; }
     if (dropLeft > 0 && --dropLeft === 0) $('ctl-status').textContent = 'Connection is back. The drop is now in the Consistency log.';
     if (slowLeft > 0 && --slowLeft === 0) $('ctl-status').textContent = 'Speed is back to normal.';
     render();
@@ -415,7 +460,7 @@ svg.chart { display: block; width: 100%; height: auto; }
       if (t <= 10) { $('sp-phase').textContent = 'Checking ping…'; $('sp-num').textContent = '–'; }
       else if (t <= 40) { $('sp-phase').textContent = 'Testing download'; $('sp-num').textContent = fmbps(goal.down * Math.min(1, (t - 10) / 8) * (0.93 + Math.random() * 0.14)); }
       else if (t < total) { $('sp-phase').textContent = 'Testing upload'; $('sp-partial').textContent = 'Download ' + fmbps(goal.down) + ' Mbps'; $('sp-num').textContent = fmbps(goal.up * Math.min(1, (t - 40) / 8) * (0.93 + Math.random() * 0.14)); }
-      else { clearInterval(running); running = null; tests.unshift({ t: Date.now(), down: goal.down, up: goal.up, ping: goal.ping, jit: goal.jit, net: net }); resetSpeed(); renderTests(); }
+      else { clearInterval(running); running = null; tests.unshift({ t: Date.now(), down: goal.down, up: goal.up, ping: goal.ping, jit: goal.jit, net: net, band: band }); resetSpeed(); renderTests(); }
     }, 100);
   }
   function resetSpeed() {
@@ -428,7 +473,7 @@ svg.chart { display: block; width: 100%; height: auto; }
     b.addEventListener('click', function () {
       tab = b.dataset.tab;
       document.querySelectorAll('.tabs button').forEach(function (o) { o.setAttribute('aria-selected', o === b); });
-      ['live', 'speed', 'cons'].forEach(function (n) { $('tab-' + n).hidden = n !== tab; });
+      ['live', 'speed', 'cons', 'data'].forEach(function (n) { $('tab-' + n).hidden = n !== tab; });
       render();
     });
   });
@@ -443,12 +488,26 @@ svg.chart { display: block; width: 100%; height: auto; }
   $('ctl-slow').addEventListener('click', function () { slowLeft = 10; $('ctl-status').textContent = 'Connection slowed. Response times are climbing for 20 seconds.'; });
   $('ctl-net').addEventListener('click', function () {
     net = net === 'Wi-Fi' ? '5G' : 'Wi-Fi';
+    switches.unshift({ t: Date.now(), to: net, used: sinceSwitch }); sinceSwitch = 0;
     this.querySelector('b').textContent = 'Switch to ' + (net === 'Wi-Fi' ? '5G' : 'Wi-Fi');
     $('ctl-status').textContent = 'Now on ' + net + '.';
     if (!running) resetSpeed();
     render();
   });
   $('sp-run').addEventListener('click', runTest);
+  $('b-check').addEventListener('click', function () {
+    var v = parseFloat($('b-input').value);
+    if (isNaN(v) || v < 0) return;
+    bundle.check = { reported: v * MB, measured: Math.max(0, bundle.size - bundle.used) };
+    render();
+  });
+  document.querySelectorAll('#band button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      band = b.dataset.b;
+      document.querySelectorAll('#band button').forEach(function (o) { o.setAttribute('aria-pressed', o === b); });
+    });
+  });
+  (function () { var n = Date.now(); switches = [{ t: n - 3 * 3600e3, to: 'Wi-Fi', used: 96 * MB }, { t: n - 4.2 * 3600e3, to: '5G', used: 0 }]; })();
 
   renderTests(); resetSpeed(); render();
   setInterval(tick, INTERVAL * 1000);
